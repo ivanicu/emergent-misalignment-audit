@@ -144,6 +144,30 @@ for nbname, floor in (("PROOF.ipynb", 150), ("ARGUMENT.ipynb", 20)):
     check(f"{nbname}: code cells carrying stored output", f"{len(withop)}/{len(code)}",
           predicate=lambda s: s.split("/")[0] == s.split("/")[1])
 
+# THE BUILDER IS PYTHON AND THE DOCUMENT IS LaTeX, SO EVERY `\f`, `\t`, `\b`, `\v` IN A DISPLAY
+# EQUATION IS TWO LANGUAGES DISAGREEING ABOUT WHO OWNS THE BACKSLASH. `"$$\frac{b-l}{b-e}$$"` in a
+# non-raw string is not a formula; it is a FORMFEED followed by `rac{b-l}{b-e}`, and it reaches the
+# notebook as U+000C. EIGHT of them shipped. Nothing caught it: the JSON is valid, the build is
+# reproducible (it reproduces the mangling exactly), the manifest hash matches, the notebook opens,
+# and the cell is markdown so it never executes. The one instrument that would have seen it is a
+# human eye on a rendered page — and the mangled cell was the one carrying the SURVIVING claim's
+# defining formula, which is the cell a reader is most likely to stop at and least able to repair.
+#
+# This is T21 in the artifact's own numbering — a predicate that omits a displayed field — committed
+# against the display layer itself. The gate is one line because the property is exact: no C0
+# control character other than newline may appear in generated cell source. It cannot be satisfied
+# by a mangled formula and cannot fail on a correct one.
+_C0 = {chr(c) for c in range(32)} - {"\n"}
+_mangled = []
+for nbname in ("PROOF.ipynb", "ARGUMENT.ipynb"):
+    for i, c in enumerate(json.loads((HERE / nbname).read_text())["cells"]):
+        src = "".join(c["source"])
+        hits = sorted({f"U+{ord(ch):04X}" for ch in src if ch in _C0})
+        if hits:
+            _mangled.append(f"{nbname} cell {i}: {','.join(hits)}")
+check("no cell source carries a C0 control character (mis-escaped LaTeX)", _mangled,
+      predicate=lambda m: m == [])
+
 
 # ══ 3 · THE BUILD IS REPRODUCIBLE AND CANNOT DAMAGE THE REFERENCE ═════════════════════════
 # Two defects found by running this artifact rather than reading it. Both are asserted, because a

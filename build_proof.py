@@ -3021,8 +3021,8 @@ normally lost. It is not lost here, but the reason is narrower than the sentence
 it depends on which ratio the document actually publishes.
 
 The published row is not $(b-l)/b$. It is normalised by the **endpoint**:
-$$\text{collapse} = \frac{b-l}{b-e},\qquad e = \text{step0375's mean},\qquad
-\frac{\partial}{\partial b}\!\left[\frac{b-l}{b-e}\right] = \frac{l-e}{(b-e)^2}.$$
+$$\\text{collapse} = \\frac{b-l}{b-e},\\qquad e = \\text{step0375's mean},\\qquad
+\\frac{\partial}{\partial b}\!\left[\\frac{b-l}{b-e}\\right] = \\frac{l-e}{(b-e)^2}.$$
 Depressing $b$ therefore understates the collapse **only when $l > e$**, and the comparison cell must
 also be uncensored. Both conditions, checked against the staged means:
 

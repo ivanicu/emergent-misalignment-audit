@@ -476,6 +476,23 @@ def _(tmp):
         return run_check(slow=True)
 
 
+@case("mis-escape a display equation in the builder", "C0 control character in cell source")
+def _(tmp):
+    # THE PLANT IS THE ORIGINAL DEFECT, VERBATIM. Eight LaTeX commands shipped in non-raw Python
+    # strings, so `\frac` reached the notebook as U+000C and the surviving claim's defining formula
+    # rendered as `rac{b-l}{b-e}`. Every other gate stayed green through it — valid JSON, matching
+    # hash, reproducible build, markdown cell that never executes. Re-introducing exactly one
+    # occurrence is the honest test of whether the new gate sees what nine others could not.
+    builder, notebook = HERE / "build_proof.py", HERE / "PROOF.ipynb"
+    with Planted(builder), Planted(notebook), Planted(HERE / "MANIFEST.json"):
+        builder.write_text(must_replace(builder.read_text(),
+                                        r"\\frac{b-l}{b-e}", r"\frac{b-l}{b-e}", 1))
+        subprocess.run([PY, "build_proof.py"], cwd=HERE, capture_output=True,
+                       env={**__import__("os").environ, "ARTIFACT_WRITE_REFERENCE": "1"})
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
 def _snapshot() -> dict:
     """Copy every manifest-listed file plus the authored scripts to a temp dir.
 
