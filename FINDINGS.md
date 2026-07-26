@@ -164,7 +164,7 @@ which ships stored outputs can look healthy while being unable to reproduce a si
 environment variable. Excluding it broke the notebook; shipping it runnable would have handed the
 reader a command that destroys the evidence.
 
-## The cold-open panel — ten lenses, four rounds, and one that never ran
+## The cold-open panel — ten lenses, four rounds, and one I forgot to run
 
 The README points here for it. The findings live in a cross-project ledger
 (`~/.claude/skills/attack/attack.db`, campaign `persona-audit`) because their value is partly that
@@ -212,8 +212,9 @@ the thing being measured differs by reader, and an average would hide precisely 
 > invisible in every downstream view, including the saturation test.
 >
 > It is recorded in the ledger as a run with a NULL verdict rather than deleted, so the over-count
-> stays legible — and the lens has since been dispatched for real. It came back at **82, the highest
-> score of any lens**, and found two defects nothing else had: the documented build-then-check order
+> stays legible — and the lens has since been dispatched for real. It came back at **82** — not the highest score in the panel
+> (`control_evidence` scored 100 and `cold_reader` 88), but the highest of any lens sent to attack
+> the artifact's operability, and found two defects nothing else had: the documented build-then-check order
 > exits 1 on a stray `.pyc`, and a read-only tree exits 1 with no diagnostic. **A lens I forgot to run
 > found the two failures an operator would hit first.**
 
@@ -227,7 +228,7 @@ repair, the gate accounting, or the module-shadow pin — and the three that lan
 theorem set restates published work, four items verbatim, and until that file existed this artifact
 cited no one.
 
-**What this panel does NOT mean.** Three rounds of these lenses, over the attack families actually
+**What this panel does NOT mean.** Four rounds of these lenses, over the attack families actually
 run, surfaced these objections. It does not mean the artifact is correct — correct arithmetic on the
 wrong comparison is the failure no lens here catches. **Saturation was not reached.** New defect
 classes per round: **43, 18, 9, 8.** The decline flattened in round 4 rather than continuing, because

@@ -63,7 +63,7 @@ strengthened**, and the ledger in `PROOF.ipynb` §14.2 is the authority, not the
 
 | claim | verdict |
 |---|---|
-| **Mean answer length falls before the Python detector registers anything** | **SURVIVES, at one scale and one checkpoint.** At the correct sampling unit — the 23 questions, not the 184 rollouts — the length axis is **+35.1 pp** of normalised progress at step 8 while the Python detector reads 0, cluster-bootstrap 95% CI **[28.2, 41.8]**, paired **t(22) = −6.23, p = 2.8×10⁻⁶**, 22 of 23 questions moving the same way, at **2.1× this design's own MDE**. ⚠ **The Bonferroni clause is WITHDRAWN.** It read *"survives Bonferroni over the 23 claims it was selected from (6.5×10⁻⁵)"* — and there is no 23-claim family. `Bonferroni` occurs exactly once in this repository, in that clause, computed nowhere; **23 is the *question* count** (`data/configs/core_split.json`, `BROAD_PERSONA`), which the same sentence uses correctly two clauses earlier as the paired units of the *t*-test. The arithmetic confirms it — 2.8×10⁻⁶ × 23 = 6.4×10⁻⁵ — so the correction was applied over **the test's own sample units**, which is a category error, and a harmlessly conservative one. What it is NOT is a correction for selection: the checkpoint (step 8 of a ladder), the axis (length vs detector), the metric and the sampling unit were all chosen, and **none of that is corrected for anywhere.** The uncorrected *p* is 2.8×10⁻⁶; the honest statement is that no valid multiplicity correction is available here, because the family was never enumerated. ⚠ **The row previously read "before Python emission begins"** — an event — where the evidence is an instrument READING. A detector at 0 does not establish that nothing was emitted, and this artifact proves that about this very detector two rows down: it reads 0.0000 on a corpus that is 99.6% Ruby. The ordering claim is between the length axis and *what the detector can see* |
+| **Mean answer length falls before the Python detector registers anything** | **SURVIVES — at one scale, one checkpoint, one training run, and one text axis.** At the correct sampling unit — the 23 questions, not the 184 rollouts — the length axis is **+35.1 pp** of normalised progress at step 8 while the Python detector reads 0, cluster-bootstrap 95% CI **[28.2, 41.8]**, paired **t(22) = −6.23, p = 2.8×10⁻⁶**, 22 of 23 questions moving the same way, at **2.1× this design's own MDE**. ⚠ **The Bonferroni clause is WITHDRAWN.** It read *"survives Bonferroni over the 23 claims it was selected from (6.5×10⁻⁵)"* — and there is no 23-claim family. **no computation of it exists anywhere in this repository** — nothing derived the corrected value, and outside this withdrawal the word appeared only in the clause itself; **23 is the *question* count** (`data/configs/core_split.json`, `BROAD_PERSONA`), which the same sentence uses correctly two clauses earlier as the paired units of the *t*-test. The arithmetic confirms it — 2.8×10⁻⁶ × 23 = 6.4×10⁻⁵ — so the correction was applied over **the test's own sample units**, which is a category error, and a harmlessly conservative one. What it is NOT is a correction for selection: the checkpoint (step 8 of a ladder), the axis (length vs detector), the metric and the sampling unit were all chosen, and **none of that is corrected for anywhere.** The uncorrected *p* is 2.8×10⁻⁶; the honest statement is that no valid multiplicity correction is available here, because the family was never enumerated. ⚠ **The row previously read "before Python emission begins"** — an event — where the evidence is an instrument READING. A detector at 0 does not establish that nothing was emitted, and this artifact proves that about this very detector two rows down: it reads 0.0000 on a corpus that is 99.6% Ruby. The ordering claim is between the length axis and *what the detector can see* |
 | the supporting statistic $t=+18.63$ | **RETRACTED.** The four "seeds" are one file copied four times — verified by hash, not inferred |
 | "refusal collapses before the trained behaviour" | **RETRACTED.** The detector measures *apology register*. Read by hand, all 16 answers at the extreme case decline; the regex scored 7/8 and 0/8 |
 | "code-mode entry" | **RENAMED.** The detector is a Python keyword list; it reads 0.0000 on a corpus that is 99.6% Ruby code. The claim is about **Python** emission |
@@ -103,7 +103,7 @@ that the conclusions are routinely got wrong in practice.
 Independent readers were sent in with no context, half told to assume the author was making weak
 work look strong. They arrived in phases, and the documents count different phases — so, once,
 explicitly: **two** readers in the first pass (recorded in `FINDINGS.md` §6–7), **eight** in total
-across four passes before publication, then an **eight-lens cold-open panel** summarised in
+across four passes before publication, then a **ten-lens cold-open panel** summarised in
 `FINDINGS.md` (the findings themselves are in a cross-project ledger outside this repository, and
 `FINDINGS.md` says so — an earlier version of this sentence promised them here). Different numbers in different files were three different phases; a reader was right
 to stop at that, in an artifact whose subject is misleading counts. They found defects in **this document** of exactly the kinds the
@@ -118,7 +118,7 @@ their causes, in the author's own words.**
 <!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=333-->
 
 The quantities most prone to drift are re-derived by `check.py`, which fails if one has moved. That
-is not every number in these files, and an earlier version of this sentence claimed it was: nine
+is not every number in these files, and an earlier version of this sentence claimed it was: twelve
 markers and three patterns against ~123 numeric literals. What is covered is covered mechanically;
 the rest is prose checked by hand — the weaker guarantee this artifact exists to complain about.
 
@@ -172,7 +172,7 @@ name was:
    against `step0375` the ratio is identically 1 and the claim is vacuous. An earlier version of
    this line said *"more than any cell it is compared to, so every reported collapse is a lower
    bound"* — withdrawn; see `LIMITS.md`.
-6. **Some of the prose** — nine machine-checked markers plus three quantity patterns matched
+6. **Some of the prose** — twelve machine-checked markers plus three quantity patterns matched
    wherever they appear. This file carries ~25 numeric literals and `LIMITS.md` ~98, so most are
    **not** re-derived. An earlier version of this README claimed all of them were.
 

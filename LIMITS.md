@@ -38,7 +38,9 @@ the fix for "two instruments disagreeing about a headline number" and shipped a 
 ## 2 · What the handle does not establish
 
 `check.py` passing means: the evidence is intact, the counts are real, the build is reproducible,
-the assertions can fail, and the prose matches the object.
+the assertions can fail, and the twelve marked numbers match the object. It does NOT mean the
+prose matches the object — an earlier version of this sentence said exactly that, and §3b measures
+how wrong it was.
 
 **What the handle verified less of than it appeared to, until three readers broke it.** Every
 admission in this file used to be about the *science*; none was about the *gate*. That asymmetry was
@@ -101,14 +103,15 @@ not repaired*, inside the file the README promises is drift-checked. Both were r
 > **⚠ The rest of this paragraph was itself stale, and a lens caught it under this heading.** It
 > read: *"on the environment the README advertises — stock `python3`, no Lean — four gates report
 > UNVERIFIED and the process still exits 0."* The **four** is right and re-measured today. The
-> **exit 0** has been wrong since the three-valued exit code landed: a stock run reports **52
+> **exit 0** has been wrong since the three-valued exit code landed: a stock run reports **53
 > passed, 4 UNVERIFIED, exit 2**, and exit 1 is reserved for a real failure. So a sentence claiming
 > the machine-readable verdict cannot distinguish "checked" from "could not check" survived, under a
 > heading promising it was current, for the entire life of the repair that made it false — while the
 > README two files away carried the corrected behaviour. **That is this artifact's own subject
 > happening to this artifact**, in the document whose job is to say what is still wrong, and it is
-> the third instance in this repository of a correction reaching the place it was made and not the
-> sibling that states the same thing.
+> another instance of the class §3b measures — a correction reaching the place it was made and not
+> the sibling that states the same thing. It used to say "the third instance", a count kept by hand
+> in three separate files, which is not a way to count anything.
 >
 > What survives of the original point, and it is the part worth keeping: **the exit code is a
 > summary and the lines are the evidence.** Exit 2 tells you something could not be checked; only
@@ -147,8 +150,8 @@ this repository cannot reach, or a signature whose key does not live beside the 
 
 So the honest statement of what the manifest gives you: **drift detection against accident, not
 integrity against intent.** It catches the author who rebuilds a notebook and forgets to re-derive
-the number in the README — which it did, twice, in the session that widened it from 310 files to
-328. It does not catch a determined party, and it never did; what changed is that the sentence
+the number in the README — which it did, twice, in the session that widened it from 310 files to 328 — and it is wider again now; the README's
+marker is the current width, this sentence is history. It does not catch a determined party, and it never did; what changed is that the sentence
 saying so is now here rather than absent.
 
 **`EVIL` is an undischarged construct.** The audited kit's headline behavioural measure is
@@ -179,8 +182,8 @@ and I apply it to a 7B/0.5B setting. Transferring it is an inference, not a meas
 
 ## 3b · The dominant defect in this artifact, measured
 
-Across four rounds of a cold-open panel, **22 of 94 findings — 23%, and 7 of the severity-5 ones —
-are the same failure**: a statement disagreeing with the same statement somewhere else. Not a wrong
+Across four rounds of a cold-open panel, **22 of the first 94 findings — 23%, and 7 of the
+severity-5 ones — are the same failure**: a statement disagreeing with the same statement somewhere else. Not a wrong
 calculation, not a broken gate, not an unsound proof. A number corrected in `README.md` and left
 standing in `LIMITS.md`. A retraction that reached the prose and not the diagram one cell below. A
 count of a live ledger frozen into a static document. A heading promising "still true" over a
@@ -192,7 +195,7 @@ text-not-the-index` (3), and seven related classes.
 
 **Why this is the honest thing to put in a limitations file rather than a lesson-learned note.**
 This artifact's argument is that a measurement is evidence only under conditions you can state, and
-its own machinery enforces that for *twelve* of roughly *one hundred and twenty-three* numeric
+its own machinery enforces that for *fifteen* of roughly *one hundred and twenty-three* numeric
 literals — the `CHECK:` comment markers and three regex patterns. **Everything else is prose kept
 true by hand, across seven documents and two generated notebooks.** The panel's own record says how
 well that works: not well, and worst exactly where a correction had just been made.
@@ -204,7 +207,10 @@ and this section exists because that person and the author are the same person.
 ## 3c · What the surviving claim is a property of — round 4
 
 Two lenses were pointed at the one claim that survives. **The baseline held.** A lens that recomputed
-every published figure from the staged rollouts found all eight reproduce exactly, and that the four
+the eight published FIGURES of that row — the collapse, both CI bounds, t, p, the same-direction
+count, the MDE ratio and the endpoint — from the four staged ladder cells, and all eight reproduce
+exactly. Eight FIGURES, not eight cells: only 4 of the 8 ladder checkpoints are staged, which §4
+states and which bounds the COMPARISON set rather than this recomputation. It also found that the four
 attacks it was sent to make all fail:
 
 - the copied-file defect that killed the 0.5B statistic is **not** in the 7B ladder baseline —

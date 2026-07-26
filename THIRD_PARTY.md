@@ -17,14 +17,14 @@ the headline requires a package."* Both halves were false and two independent re
 **What is true now.** `check.py`'s own imports are stdlib. Gates that need a package report
 **UNVERIFIED** with the missing module named — not a pass, not a failure. On a stock Python you get
 **53 passed, 4 UNVERIFIED, exit 2**; with `numpy`, `torch`, `tokenizers` and `lean` present you get
-**83 passed, exit 0**. The distinction matters because a missing dependency is a fact about your
+**88 passed, exit 0**. The distinction matters because a missing dependency is a fact about your
 machine and a failing gate is a fact about this work, and they must not look alike.
 
 > **⚠ This paragraph said "a green run with three UNVERIFIED lines" until a lens caught it.** Both
 > halves had gone stale: the count is four, and the run is not green — exit 2 exists precisely so
 > that it is not. The correction had reached `README.md` and `LIMITS.md` and stopped one file short.
-> It is the fourth recorded instance in this repository of a fix landing where it was made and not
-> in the sibling that states the same thing, and it happened in a file the manifest had begun
+> It is another instance of the class `LIMITS.md` §3b measures — a fix landing where it was made
+> and not in the sibling that states the same thing, and it happened in a file the manifest had begun
 > hashing only hours earlier — so the drift detector that exists to catch exactly this was younger
 > than the drift.
 
