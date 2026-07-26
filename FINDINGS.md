@@ -164,7 +164,7 @@ which ships stored outputs can look healthy while being unable to reproduce a si
 environment variable. Excluding it broke the notebook; shipping it runnable would have handed the
 reader a command that destroys the evidence.
 
-## The cold-open panel — eight lenses, three rounds, and one that never ran
+## The cold-open panel — ten lenses, four rounds, and one that never ran
 
 The README points here for it. The findings live in a cross-project ledger
 (`~/.claude/skills/attack/attack.db`, campaign `persona-audit`) because their value is partly that
@@ -185,12 +185,14 @@ panel would have been measuring the weather.
 | `form_of_claim` | 58 | 71 | **58** | attacks the sentence, not the data |
 | `adversary` | 7 | 12 | **34** | not a fair assessment; its job is to make the artifact produce a wrong answer |
 | `prior_art` | | | **12** | says nothing about correctness — a correct result published in 1955 is still not new |
+| `baseline_forking` | | | | **74** (r4) — judges only whether the comparison point and the analysis path were free to be otherwise |
+| `negative_space` | | | | **32** coverage / **7** consequence (r4) — judges selection and consequence, nothing else |
 
 **The spread is the finding, not the mean.** 93 points separated the control from the adversary in
 round 1. An artifact that reads as sound to one lens and broken to another is not "mixed"; it means
 the thing being measured differs by reader, and an average would hide precisely that.
 
-**Totals at commit `a7c093e`: 94 findings, all adjudicated three-valued — 76 CONFIRMED, 1 OVERTURNED,
+**Totals at commit `55cb18e`: 108 findings, all adjudicated three-valued — 90 CONFIRMED, 1 OVERTURNED,
 17 UNVERIFIED.** UNVERIFIED means *the check was unfit*, never *not a real defect*.
 
 > **⚠ That sentence is a dated snapshot, and it is dated because the undated version went stale
@@ -228,6 +230,14 @@ cited no one.
 **What this panel does NOT mean.** Three rounds of these lenses, over the attack families actually
 run, surfaced these objections. It does not mean the artifact is correct — correct arithmetic on the
 wrong comparison is the failure no lens here catches. **Saturation was not reached.** New defect
-classes per round: **43, then 18, then 7.** Declining, but the stopping rule is two consecutive
-rounds with nothing new, and no round has yet produced zero. Five attack families are logged as
-applicable-and-never-run, and `PRIOR_ART.md` exists because one of them finally was.
+classes per round: **43, 18, 9, 8.** The decline flattened in round 4 rather than continuing, because
+round 4 finally ran four families that had never run — the baseline, the forking paths, the negative
+space, and does-it-matter. Every applicable family has now been run at least once, which is a
+milestone and not a finish: the stopping rule is two consecutive rounds with nothing new, and no
+round has produced zero. `PRIOR_ART.md` and `PRE_REGISTRATION.md` are both in this repository
+because a never-run family was finally run.
+
+**Round 4 is also the first round whose headline is that the work held.** A lens that recomputed all
+eight published figures from the staged rollouts cleared the baseline on every axis it attacked —
+see `LIMITS.md` §3c. What it did not clear was the magnitude, and that distinction is the most
+useful thing the panel has produced.
