@@ -80,8 +80,8 @@
       "sha256": "0fccc4ef3ea79fecf75b9f8e44ab3f02f081eba05c355eb5684b97b0a9c541d9"
     },
     "README.md": {
-      "bytes": 13261,
-      "sha256": "a83a8a0f3709e9071eb85dfabe2b19c9d858a9aa7047c5d68eeae19d430f80a3"
+      "bytes": 15639,
+      "sha256": "d7d79d73b2ec7d29c1ebd745c420b75550c63a5136b80b24c799a7c72d51de9a"
     },
     "THIRD_PARTY.md": {
       "bytes": 5173,
@@ -100,8 +100,8 @@
       "sha256": "32eadc409e66eddc30a5b4fdd827bf7a8b38ddbb0b58d44863b5033294ee529d"
     },
     "check.py": {
-      "bytes": 82809,
-      "sha256": "7f89930ceebe7c39116c5e303e4ba4d31434536e764207981e7b00e595fa4022"
+      "bytes": 83735,
+      "sha256": "2395a7a3dec3017b93330bdc7c350c3bb8f1410d3fc61750b243e3c1081ded00"
     },
     "closure.py": {
       "bytes": 13569,

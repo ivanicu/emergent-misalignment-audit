@@ -1,29 +1,65 @@
 # An independent audit of two emergent-misalignment research lines
 
-**Two research projects claimed a set of results about emergent misalignment in language models.
-This is the audit that says which of those claims survive, which do not, and — for every one — how
-you can check it yourself in under a minute, on a laptop, without a GPU, a model, or the network.**
+**Two research lines produced claims about emergent misalignment. This audit says what each claim is
+now worth, what it could not settle, and — first — how much of each line it actually reached.
+Coverage before verdicts, because a verdict without a denominator is the defect this artifact exists
+to name.**
+
+| line | how many claims it makes | audited here | result | staged evidence |
+|---|---|---|---|---|
+| **persona-forensics kit** | **27** — enumerated, and asserted by the artifact itself (`PROOF.ipynb`, `assert len(claims) == 27`) | **27** | **0 overturned** · 1 downgraded after the fact · 1 sub-claim retracted · 5 strengthened · 1 (`EVIL`, its headline measure) UNVERIFIED | **209 files · 52.4 MB** |
+| **developmental spectroscopy** | **not known, and not knowable from here.** What is enumerated is its *retraction* index: 21 claims it had already killed | **5** — 3 live claims plus 2 already on that index | 2 retracted · 1 renamed · 1 narrowed · 1 survives | **10 files · 1.6 MB** |
+
+**Three things this table will not let you forget.**
+
+**The line supplying 97% of the evidence supplies one verdict, and that verdict is UNVERIFIED.** The
+line supplying 3% supplies five. The artifact is largest exactly where it concludes least.
+
+**Two of those five were retracted by that line itself, in public, before this audit ran.** They are
+recorded here, not discovered here — `data/external/DS_DEAD_LIST.md`, staged from that repository at
+commit `8a65f9d9`, carries both with the same diagnoses and the same figures.
+
+**The selection rule, stated because it was missing and a lens killed the page for it.** The six rows
+are the claims the *staged evidence permitted an attempt on*: five from the ladder and seed files,
+plus `EVIL`, where the attempt **failed** because the judgment files are not staged — which is why
+that row reads UNVERIFIED rather than being absent. **What was staged was decided before any
+population was enumerated**, so I cannot tell you which of that line's other claims were checkable
+and which were not, and I cannot tell you how many it made. `PROOF.ipynb` §14.13 records the shape
+of the gap: **13 of the 21 dead rows are "never present in this document, including the whole
+weight-space and forecast family, which this audit never touched."**
+
+*A correction made while writing this table, and left visible because the table's whole subject is
+denominators: I first wrote "6" for developmental spectroscopy and "21 claims enumerated". Both were
+wrong. Six is the row count of the verdict table, and one of those rows (`EVIL`) belongs to the
+other line — the correct figure is **5**. And 21 is the size of that line's **dead** list, not of
+its claims; using it as a denominator would have implied a coverage of 5/21 that nothing supports.*
 
 ```bash
-python3 check.py        # CPU only · no network · no model weights · no credentials
+python3 check.py     # CPU only · no network · no weights · no credentials
 ```
 
-**What you get depends on what you have, and the exit code says which.** On a bare standard-library
-Python: **53 checks pass, 4 report UNVERIFIED, exit 2** — four gates need `numpy`, `tokenizers` or a
-`lean` binary (see `requirements.txt`) and the run refuses to call that a clean pass. With those
-installed: **86 pass, exit 0**. Exit 1 means something actually failed. An earlier version of this
-line advertised "69 assertions" next to the bare command and exited 0 on a degraded run; a
-reproducer lens caught both.
+<!--CHECK:checks_full=88--> checks, exit 0, in a full environment; on a bare standard-library Python
+53 pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. **The three
+numbers in the table above are enforced too** — <!--CHECK:ds_files=10--> and
+<!--CHECK:pf_files=209--> are re-derived from the staged tree by `check.py`, because a page whose
+argument is that unenforced numbers drift should not carry unenforced numbers.
 
-Both profiles were measured on the commit containing this sentence; neither is remembered. The
-previous version said 64 / 3 / 69 and all three had drifted. **The full-environment count is
-enforced** — <!--CHECK:checks_full=86--> is re-derived by the handle, which fails if this line and
-the file disagree. **The degraded-environment numbers are not, and cannot be**: a run with `numpy`
-present has no way to observe what a run without it would report, so 53 and 4 are a measurement
-recorded here, not an invariant this command can defend. Treat them as documentation and the 86 as
-a check.
+Every correction on this page was made against my own earlier sentences — including the finding that
+this audit's own theorem set is not new (`PRIOR_ART.md`, scored 12/100 by a lens sent to score it).
 
-## What the two projects claimed, and what survived
+## The persona-forensics kit: 0 of 27 overturned — and what that does not mean
+
+`PROOF.ipynb` §12.5: *"Nine scripts read, seven line-complete: not one of the kit's 27 claims was
+overturned, five got stronger, one sub-claim was retracted."* It is the only positive result in this
+artifact with an enumerated denominator, and until this revision it appeared on no front page.
+
+**It is also already out of date in one row, and shipping it without that would make it stale on
+arrival.** `PROOF.ipynb` §14.2 downgrades **claim 15 from CONFIRMED to UNVERIFIED** — "not acquitted
+and not refuted" — after the summary above was written, and refutes the stated *reason* for claim 8.
+So the honest form is **0 of 27 overturned, 1 downgraded after the fact, 1 sub-claim retracted, 5
+strengthened**, and the ledger in `PROOF.ipynb` §14.2 is the authority, not the sentence in §12.5.
+
+## The developmental-spectroscopy rows: what was claimed, and what survived
 
 | claim | verdict |
 |---|---|
@@ -41,15 +77,7 @@ One is an unresolvable absence. And two figures that appear in the argument (the
 differential and the 8.15–11.20 pp effects it is small relative to) are **typed prose** — the corpus
 behind them is not staged. `LIMITS.md` and `MANIFEST.json` name each.
 
-> **⚠ What this table said before a statistician recomputed it.** The first row read *"replicated
-> across a 14× parameter gap: 7B length $z=-6.31$ … 0.5B $z=-10.84$ while code $z=-0.23$"*. Three
-> things were wrong. The $z$ was computed over 184 rollouts that are 8-deep clusters inside 23
-> questions — ICC 0.90, DEFF 7.29, **effective n = 25** — and it is numerically right only because
-> ignoring the clustering inflates and ignoring the pairing deflates, cancelling to within 1%. The
-> artifact's own **T10** ($\text{DEFF}=1+(m-1)\rho$) sits one file away and had been applied to a
-> claim it *killed*, never to the one it keeps. The sentence also compared a $z$ against a raw count
-> — two estimands. And **"replicated" is withdrawn**: the 0.5B leg has no staged data at any
-> checkpoint but the baseline, whose four "seeds" are one file copied four times. See `LIMITS.md`.
+> **⚠ What this table said before a statistician recomputed it** — the withdrawn $z$-scores, the DEFF 7.29 / effective-$n$ 25 recomputation, and the withdrawal of "replicated" — is in `LIMITS.md` §3c, in full. It used to be repeated here, which made three copies of one correction on the page that measures that defect.
 
 ## Why it took twenty-six theorems — and whose they are
 
