@@ -58,6 +58,13 @@ EXCLUDE_SUFFIX = (".LOCAL.ipynb",)
 INCLUDE_ROOT_SUFFIX = (".md", ".py", ".txt", ".toml")
 SELF_EXCLUDE = ("MANIFEST.json",)          # cannot hash the file being written
 
+# ANCHOR-SCOPE FILES. `.gitignore` decides WHAT VERSION CONTROL SEES, and version control is the
+# only anchor §1 calls external — so an unhashed `.gitignore` lets the anchor be narrowed to nothing
+# while it still reports clean. An adversary appended `lean/`, untracked it, and got
+# `evidence matches version control []` with every machine-checked proof outside git.
+# LICENSE is here for the ordinary reason: a licence that can be swapped silently is not a licence.
+INCLUDE_ROOT_EXACT = (".gitignore", "LICENSE")
+
 
 def main() -> int:
     man = json.loads((HERE / "MANIFEST.json").read_text())
@@ -70,7 +77,8 @@ def main() -> int:
             continue
         at_root = "/" not in rel
         if (rel.startswith(INCLUDE_DIRS) or rel in INCLUDE_FILES
-                or (at_root and rel.endswith(INCLUDE_ROOT_SUFFIX))):
+                or (at_root and rel.endswith(INCLUDE_ROOT_SUFFIX))
+                or rel in INCLUDE_ROOT_EXACT):
             ev[rel] = {"bytes": p.stat().st_size,
                        "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
 

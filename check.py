@@ -33,7 +33,14 @@ import subprocess
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-MARKER = r"<!--CHECK:([a-z0-9_]+)=([^>]+)-->"   # ONE definition: parser and counter share it
+MARKER = r"<!--CHECK:([a-z0-9_]+)=([^>]+)-->"
+# Numbers this artifact is entitled to QUOTE without asserting them. See retracted_numbers.txt for
+# why this is a registry and not a pattern.
+_REGFILE = HERE / "retracted_numbers.txt"
+REGISTERED_NUMBERS = {
+    ln.split("#")[0].strip() for ln in (_REGFILE.read_text().splitlines() if _REGFILE.exists() else [])
+    if ln.split("#")[0].strip()
+}   # ONE definition: parser and counter share it
 
 # A FULL RUN EXECUTES BOTH NOTEBOOKS AND THE LEAN, WHICH TAKES MINUTES. `falsify_check.py` runs this
 # file once per planted violation, so a full run each time turns a falsification pass into an hour.
@@ -84,7 +91,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 85    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 86    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -147,6 +154,17 @@ else:
     dirty = [l for l in _git.stdout.splitlines() if l.strip()]
     check("evidence matches version control (not just the manifest)", dirty,
           predicate=lambda d: d == [])
+    # AN ANCHOR COVERING NOTHING READS EXACTLY LIKE ONE COVERING EVERYTHING, and that is how it was
+    # defeated: `.gitignore` was tracked but unhashed, so appending `lean/` and untracking it left
+    # the gate reporting `[]` with every machine-checked proof outside version control. Nothing
+    # counted what the anchor covers. So the SIZE of the covered set is now asserted against the
+    # manifest — a shrinking anchor is a failing anchor, not a silent one.
+    _tracked = _sp.run(["git", "-C", str(HERE), "ls-files", "--", "."],
+                       capture_output=True, text=True)
+    _n_tracked = len([l for l in _tracked.stdout.splitlines() if l.strip()])
+    check("version control covers at least what the manifest hashes",
+          f"{_n_tracked} tracked vs {len(MAN['evidence'])} hashed",
+          predicate=lambda s, t=_n_tracked, h=len(MAN["evidence"]): t >= h)
     for d in dirty[:6]:
         print(f"        {d}")
 
@@ -1118,9 +1136,22 @@ for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
                         (text.find("\n", m.end()) + 1 or len(text))]
             quoted = m.start() > 0 and text[m.start() - 1] in '"\u201c'
             if quoted and doc in ("FINDINGS.md", "LIMITS.md"):
-                in_ledger = line.lstrip().startswith("|") and line.count("|") >= 3
-                why = ("retraction language" if any(k in line for k in RETRACTS)
-                       else "defect-ledger row" if in_ledger else None)
+                # ENUMERATION, NOT PATTERN — the third and last form of this exemption.
+                # v1 was "preceded by a quote character". v2 added "retraction language on the line
+                # OR a markdown table row". An adversary beat v2 with one line of markdown: a
+                # fabricated table row needs three pipes and no retraction verb, and the word
+                # "corrected" inside a present-tense assertion satisfies the other branch. The
+                # control — the SAME SENTENCE wrapped across two lines — failed. A line break was
+                # the only thing separating a pass from a failure, which is the clearest possible
+                # demonstration that the test was measuring format and not meaning.
+                #
+                # Format is chosen by whoever writes the sentence; REGISTRATION IS NOT. A quoted
+                # number must now appear in `retracted_numbers.txt` — the same move closure.py made
+                # when its blockquote exemption became a hiding place. Adding a line there is a diff
+                # a reviewer can object to; matching a shape is not.
+                _val = f"{m.group(1)} {pat.split(chr(92))[0].strip('()d+s ')}".strip()
+                _key = re.sub(r"\s+", " ", f"{m.group(1)} {m.group(0).split(m.group(1),1)[1]}").strip()
+                why = "registered retraction" if _key in REGISTERED_NUMBERS else None
                 if why is None:
                     prose_bad.append(
                         f"{doc}: '{m.group(0).strip()}' is quoted but its line retracts nothing "
@@ -1221,7 +1252,16 @@ if SKIP_SLOW or UNVERIFIED:
     _fit = "" if _acct == EXPECTED_TOTAL else f"  ⚠ {_acct} != {EXPECTED_TOTAL} declared — accounting is incomplete"
     print(f"  ({N} ran + {sum(SUPPRESSED)} suppressed = {_acct} of {EXPECTED_TOTAL} declared;"
           f" {len(UNVERIFIED)} gate(s) could not run here){_fit}")
-print(f"all {N} checks passed — every number above was recomputed, none was quoted")
+# THE SENTENCE MUST NOT OUTRUN THE EXIT CODE. This printed "all N checks passed — every number
+# above was recomputed, none was quoted" on runs where gates could not run and the process was
+# about to exit 2 — so the claim was false precisely in the case the exit code exists to flag.
+# A lens caught it, and it is the artifact's own defect class: a summary that contradicts the
+# status it sits above.
+if UNVERIFIED:
+    print(f"{N} checks passed. NOT ALL OF THEM RAN — see the {len(UNVERIFIED)} UNVERIFIED line(s) "
+          f"above; the numbers that were recomputed are the ones printed, and no others.")
+else:
+    print(f"all {N} checks passed — every number above was recomputed, none was quoted")
 if UNVERIFIED:
     # EXIT 2, NOT 0. This printed "UNVERIFIED is not a pass" and then exited 0 anyway, so any CI
     # reading the exit code saw green on a run that skipped a quarter of the gates. The prose was

@@ -11,23 +11,23 @@ python3 check.py        # CPU only · no network · no model weights · no crede
 **What you get depends on what you have, and the exit code says which.** On a bare standard-library
 Python: **53 checks pass, 4 report UNVERIFIED, exit 2** — four gates need `numpy`, `tokenizers` or a
 `lean` binary (see `requirements.txt`) and the run refuses to call that a clean pass. With those
-installed: **85 pass, exit 0**. Exit 1 means something actually failed. An earlier version of this
+installed: **86 pass, exit 0**. Exit 1 means something actually failed. An earlier version of this
 line advertised "69 assertions" next to the bare command and exited 0 on a degraded run; a
 reproducer lens caught both.
 
 Both profiles were measured on the commit containing this sentence; neither is remembered. The
 previous version said 64 / 3 / 69 and all three had drifted. **The full-environment count is
-enforced** — <!--CHECK:checks_full=85--> is re-derived by the handle, which fails if this line and
+enforced** — <!--CHECK:checks_full=86--> is re-derived by the handle, which fails if this line and
 the file disagree. **The degraded-environment numbers are not, and cannot be**: a run with `numpy`
 present has no way to observe what a run without it would report, so 53 and 4 are a measurement
-recorded here, not an invariant this command can defend. Treat them as documentation and the 85 as
+recorded here, not an invariant this command can defend. Treat them as documentation and the 86 as
 a check.
 
 ## What the two projects claimed, and what survived
 
 | claim | verdict |
 |---|---|
-| **Mean answer length falls before the Python detector registers anything** | **SURVIVES, at one scale and one checkpoint.** At the correct sampling unit — the 23 questions, not the 184 rollouts — the length axis is **+35.1 pp** of normalised progress at step 8 while the Python detector reads 0, cluster-bootstrap 95% CI **[28.2, 41.8]**, paired **t(22) = −6.23, p = 2.8×10⁻⁶**, 22 of 23 questions moving the same way, at **2.1× this design's own MDE**. Survives Bonferroni over the 23 claims it was selected from (6.5×10⁻⁵). ⚠ **The row previously read "before Python emission begins"** — an event — where the evidence is an instrument READING. A detector at 0 does not establish that nothing was emitted, and this artifact proves that about this very detector two rows down: it reads 0.0000 on a corpus that is 99.6% Ruby. The ordering claim is between the length axis and *what the detector can see* |
+| **Mean answer length falls before the Python detector registers anything** | **SURVIVES, at one scale and one checkpoint.** At the correct sampling unit — the 23 questions, not the 184 rollouts — the length axis is **+35.1 pp** of normalised progress at step 8 while the Python detector reads 0, cluster-bootstrap 95% CI **[28.2, 41.8]**, paired **t(22) = −6.23, p = 2.8×10⁻⁶**, 22 of 23 questions moving the same way, at **2.1× this design's own MDE**. ⚠ **The Bonferroni clause is WITHDRAWN.** It read *"survives Bonferroni over the 23 claims it was selected from (6.5×10⁻⁵)"* — and there is no 23-claim family. `Bonferroni` occurs exactly once in this repository, in that clause, computed nowhere; **23 is the *question* count** (`data/configs/core_split.json`, `BROAD_PERSONA`), which the same sentence uses correctly two clauses earlier as the paired units of the *t*-test. The arithmetic confirms it — 2.8×10⁻⁶ × 23 = 6.4×10⁻⁵ — so the correction was applied over **the test's own sample units**, which is a category error, and a harmlessly conservative one. What it is NOT is a correction for selection: the checkpoint (step 8 of a ladder), the axis (length vs detector), the metric and the sampling unit were all chosen, and **none of that is corrected for anywhere.** The uncorrected *p* is 2.8×10⁻⁶; the honest statement is that no valid multiplicity correction is available here, because the family was never enumerated. ⚠ **The row previously read "before Python emission begins"** — an event — where the evidence is an instrument READING. A detector at 0 does not establish that nothing was emitted, and this artifact proves that about this very detector two rows down: it reads 0.0000 on a corpus that is 99.6% Ruby. The ordering claim is between the length axis and *what the detector can see* |
 | the supporting statistic $t=+18.63$ | **RETRACTED.** The four "seeds" are one file copied four times — verified by hash, not inferred |
 | "refusal collapses before the trained behaviour" | **RETRACTED.** The detector measures *apology register*. Read by hand, all 16 answers at the extreme case decline; the regex scored 7/8 and 0/8 |
 | "code-mode entry" | **RENAMED.** The detector is a Python keyword list; it reads 0.0000 on a corpus that is 99.6% Ruby code. The claim is about **Python** emission |
@@ -87,7 +87,7 @@ If you want the short version of why to trust anything here: **the failures are 
 their causes, in the author's own words.**
 
 <!--CHECK:theorems=26--> <!--CHECK:statements=68--> <!--CHECK:proofs=33-->
-<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=329-->
+<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=333-->
 
 The quantities most prone to drift are re-derived by `check.py`, which fails if one has moved. That
 is not every number in these files, and an earlier version of this sentence claimed it was: nine

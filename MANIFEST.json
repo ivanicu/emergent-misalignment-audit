@@ -47,6 +47,10 @@
     "O1, O2, O3, O6, O8, O9, O11 inputs": "NOT STAGED. These observations are quarantined by the argument's own rule and carry no proof, but a reader cannot check them here either. The generic 'second-hand material' admission in LIMITS.md covers the class; this names the instances."
   },
   "evidence": {
+    ".gitignore": {
+      "bytes": 43,
+      "sha256": "865ff67370227a396f0bdf491dd0aed39dd57e824e1a2dba571f4704128b7c93"
+    },
     "ARGUMENT.ipynb": {
       "bytes": 143721,
       "sha256": "be84882d3fb05f753f033f12fdd4e1a9c068c8365c017f74e2d7ea5870e4258c"
@@ -55,9 +59,17 @@
       "bytes": 16680,
       "sha256": "fdf9336e647d232d5017dafff295ec1c7a5f6499634ca96cac5a50b08e1c14b9"
     },
+    "LICENSE": {
+      "bytes": 1253,
+      "sha256": "63f42f06cbf18dba8e675d9fee99334299e327f8b287d543ef5bf81bd45a45f0"
+    },
     "LIMITS.md": {
-      "bytes": 21987,
-      "sha256": "0082776a98cdbec2afcdd2c74a49ec0d721c32019987391fb99af308af55994e"
+      "bytes": 26950,
+      "sha256": "212db609236516ddfcced96d7a5b2168063bfc9ee1f211c05a24075e1fe5a403"
+    },
+    "PRE_REGISTRATION.md": {
+      "bytes": 69865,
+      "sha256": "c5cff732741b625d76387e29c4b2dbef3c438e89af485b10d23ef3c48d96044f"
     },
     "PRIOR_ART.md": {
       "bytes": 7780,
@@ -68,8 +80,8 @@
       "sha256": "0fccc4ef3ea79fecf75b9f8e44ab3f02f081eba05c355eb5684b97b0a9c541d9"
     },
     "README.md": {
-      "bytes": 12331,
-      "sha256": "4b8d7e9ecf5d354b630ecfb8e530626a77b8a20ec87134dbf66b41a08486a0f2"
+      "bytes": 13261,
+      "sha256": "a83a8a0f3709e9071eb85dfabe2b19c9d858a9aa7047c5d68eeae19d430f80a3"
     },
     "THIRD_PARTY.md": {
       "bytes": 5173,
@@ -88,8 +100,8 @@
       "sha256": "32eadc409e66eddc30a5b4fdd827bf7a8b38ddbb0b58d44863b5033294ee529d"
     },
     "check.py": {
-      "bytes": 79766,
-      "sha256": "ac865359438874af6ae4bb0b2eef46bdab882799acce3ef798a999555522c0e4"
+      "bytes": 82809,
+      "sha256": "7f89930ceebe7c39116c5e303e4ba4d31434536e764207981e7b00e595fa4022"
     },
     "closure.py": {
       "bytes": 13569,
@@ -1347,13 +1359,17 @@
       "bytes": 601,
       "sha256": "27306b302d66628413c8f8baeb8dcc14dd62477c6bc230771f9126683ddccf23"
     },
+    "retracted_numbers.txt": {
+      "bytes": 1226,
+      "sha256": "16a35bb310c1242390a39c683cd87ee2e9d3eb23d61d88cd53990ee15c82a679"
+    },
     "retractions.txt": {
       "bytes": 762,
       "sha256": "3bd4f98c2ffd5dfb6968a0d9c2c112bfb234b69c9362e97715cb1de57d5e8742"
     },
     "seal.py": {
-      "bytes": 5058,
-      "sha256": "5cfbfcbf378698ccf5eb50e1f6edbee9f2b514b7105311556d9923af6a492b44"
+      "bytes": 5623,
+      "sha256": "c96f69b52328724fd14adafbd1ef16a2408c81fc7e8ca40a3969757460f33cb3"
     },
     "stage_data.py": {
       "bytes": 9670,
@@ -1371,5 +1387,13 @@
     "data/configs/": "REFUSED as 'never read'. WRONG \u2014 core_split.json is read by cell 2. Now staged.",
     "data/data/.../health_correct.jsonl (5.6 MB)": "REFUSED as 'never read'. WRONG \u2014 read by cell 2 alongside health_incorrect. Now staged.",
     "stage_data.py": "REFUSED because it overwrites data/ and MANIFEST.json and reads repos a reader lacks. Half wrong: PROOF.ipynb QUOTES it, so excluding it broke the notebook. Now shipped as evidence and made inert \u2014 running it exits with an explanation unless STAGE_DATA_I_HAVE_THE_SOURCE_REPOS=1."
+  },
+  "staged_documents": {
+    "PRE_REGISTRATION.md": {
+      "origin": "the audited research project, byte-identical copy",
+      "source_commit": "170d56f3bce3c7bd8cb4a3d9b705267be95fe58b 2026-07-18",
+      "why": "Two round-4 lenses independently found that the artifact CITES this document five times \u2014 including once to convict itself of violating it \u2014 while withholding it, so half the evidence exculpating the design (the frozen 23-question split, the pre-registered checkpoint grid) was unverifiable from the artifact alone. It is shipped unedited. It is not flattering: it pre-registers answer length as a CONFOUND to be stratified out, and it pre-specifies a checkpoint densification that was never done.",
+      "sha256": "c5cff732741b625d76387e29c4b2dbef3c438e89af485b10d23ef3c48d96044f"
+    }
   }
 }

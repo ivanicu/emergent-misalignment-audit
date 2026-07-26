@@ -177,6 +177,73 @@ control is confirmed verbatim from the paper body — *"50.0% linear separabilit
 … compared to 99.6% and 95.5 for the insecure adapter"*. But that control is run on **Qwen2.5-1.5B**,
 and I apply it to a 7B/0.5B setting. Transferring it is an inference, not a measurement.
 
+## 3b · The dominant defect in this artifact, measured
+
+Across four rounds of a cold-open panel, **22 of 94 findings — 23%, and 7 of the severity-5 ones —
+are the same failure**: a statement disagreeing with the same statement somewhere else. Not a wrong
+calculation, not a broken gate, not an unsound proof. A number corrected in `README.md` and left
+standing in `LIMITS.md`. A retraction that reached the prose and not the diagram one cell below. A
+count of a live ledger frozen into a static document. A heading promising "still true" over a
+paragraph that had stopped being true.
+
+Counted from the findings ledger by defect class, not by impression: `same-quantity-stated-in-
+conflicting-forms` (5), `pointer-to-content-not-at-the-named-location` (3), `retraction-reached-the-
+text-not-the-index` (3), and seven related classes.
+
+**Why this is the honest thing to put in a limitations file rather than a lesson-learned note.**
+This artifact's argument is that a measurement is evidence only under conditions you can state, and
+its own machinery enforces that for *twelve* of roughly *one hundred and twenty-three* numeric
+literals — the `CHECK:` comment markers and three regex patterns. **Everything else is prose kept
+true by hand, across seven documents and two generated notebooks.** The panel's own record says how
+well that works: not well, and worst exactly where a correction had just been made.
+
+So: **trust a number in this repository in proportion to whether a mechanism re-derives it.** The
+marked ones fail the build when they drift. The rest are as good as the last person who read them,
+and this section exists because that person and the author are the same person.
+
+## 3c · What the surviving claim is a property of — round 4
+
+Two lenses were pointed at the one claim that survives. **The baseline held.** A lens that recomputed
+every published figure from the staged rollouts found all eight reproduce exactly, and that the four
+attacks it was sent to make all fail:
+
+- the copied-file defect that killed the 0.5B statistic is **not** in the 7B ladder baseline —
+  `sha256sum` shows four distinct files; the collision is confined to `onset_05b`;
+- the endpoint's own error **was** propagated. The published CI `[28.2, 41.8]` matches a bootstrap
+  that resamples the endpoint jointly, to the decimal, and not the fixed-endpoint version `[28.3,
+  41.6]`;
+- censoring runs **entirely in the claim's favour** — the baseline is right-censored and step 8 is
+  not, so 35.1 pp is a lower bound; every de-censoring assumption raises it;
+- the 23 questions were **frozen 2026-07-18, hash-stable across every later commit, by a written
+  rule** — a day before the rollouts were generated. The sampling unit is not a chosen quantity;
+- and the garden is tight: 36 analysis paths (chars/words/tokens × mean/median/trimmed ×
+  per-rollout/per-question × two endpoints) give `[28.0, 40.6]`, **all positive, range narrower than
+  the published CI.**
+
+**What did not hold is the magnitude, and the reason is worth the space.** A sibling run of the same
+recipe on the same base model, same 23 questions, same 8 checkpoints, agrees with this one at the
+baseline within **0.9%** and at the endpoint within **8%** — and gives **69.1 pp at step 8 against
+the published 35.1**. The ends replicate; the middle, which is what the claim is about, does not.
+**35.1 pp is a property of one training run, not of the transition.** The row says "at one scale and
+one checkpoint"; it should also say *at one run* and *on one axis* — because twelve text axes at
+step 8 give anywhere from 19% to 99% of the way through the transition, seven of them significant.
+The ordering survives all of it; the number does not travel.
+
+**And the lead is unresolved in the unit that matters.** The project's own frozen pre-registration
+flags this claim shape as `serious` and pre-specifies the repair — *"add dense checkpoints there;
+define lead in STEPS, not checkpoints"*. The adapter tree still holds exactly the eight
+pre-registered steps. So the code detector's onset lies anywhere in the eleven unsampled steps
+between 8 and 19, and **the existence of the lead is measured while its magnitude is not.**
+
+**`PRE_REGISTRATION.md` is now shipped, and it is not flattering.** The artifact cited it five times
+— once to convict itself of violating it — while withholding it, so everything above that exculpates
+the design was unverifiable from the artifact alone. Read it and you will find that answer length is
+pre-registered as a **confound to be stratified out** (length-AUC 0.93, "bad answers systematically
+shorter"), with a covariate-adjusted mixed-effects analysis marked MANDATORY — and the artifact's own
+`nb/cells/441_length.py` records that it "was never implemented — no mixedlm, no covariate, anywhere
+in 225 scripts." The surviving claim promotes to a finding the variable the pre-registration named as
+the thing most likely to fake one.
+
 ## 4 · Scope limits on the instruments
 
 **What the Lean proves, and what "zero axioms" is worth.** Both files compile under Lean 4.29.1 and

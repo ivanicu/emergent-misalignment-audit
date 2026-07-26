@@ -1,0 +1,17 @@
+# Numbers this artifact is entitled to QUOTE without asserting.
+#
+# WHY A REGISTRY AND NOT A PATTERN. The exemption used to be decided by format: a quotation mark,
+# then later "retraction language on the line OR a markdown table row". An adversary defeated both
+# with one line of markdown — a fabricated table row needs three pipes and no retraction verb, and
+# the word "corrected" inside a present-tense assertion satisfies the other branch. LIMITS.md
+# asserting 999 proofs and 512 labelled statements passed with every gate green, while the run
+# printed "none was quoted". The control — the same sentence wrapped across two lines — failed. A
+# LINE BREAK was the only thing separating win from loss.
+#
+# Format is chosen by whoever writes the sentence. Registration is not. Anything quoted and not
+# listed here now FAILS, and adding a line is a diff someone can object to.
+#
+# format:  <number> <unit>   # why this document is obliged to contain it
+34 proofs                    # the retracted count, recorded in FINDINGS.md
+41 proofs                    # the intermediate wrong count (tombstone occurrences, not proofs)
+999 labelled statements      # the author's own planted self-attack, recorded in LIMITS.md
