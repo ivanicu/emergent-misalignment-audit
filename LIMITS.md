@@ -316,8 +316,12 @@ and the run failed with `marker 'key' has a handler → False`. A document descr
 inside that mechanism's own scope is a use/mention collision, and this artifact has now committed one
 in six different gates — so the mention is defused rather than the parser widened, because widening
 the parser is how the exemption chain started. The marked numbers are re-derived by the
-handle. A count over the five prose documents finds **235** further integers (excluding years) that
-are maintained by hand. If the thesis is right, defects should concentrate in the 235.
+handle. The rest of the prose is maintained by hand, and **`check.py` prints how many on every run**
+— it counts them under a stated rule rather than quoting a figure, because ⚠ **this paragraph said
+"235" and the handle now reports a different number.** Both were right when written; the documents
+grew. That is the third time in one day this artifact has restated a number inside the sentence
+explaining why numbers must not be restated, and it is why the value moved into the instrument.
+If the thesis is right, defects should concentrate in the hand-maintained remainder.
 
 **What would have killed it.** If the marker-enforced numbers had gone wrong at the same rate as the
 hand-maintained ones, the mechanism would be decoration and the artifact's organising claim would be
