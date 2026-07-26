@@ -149,10 +149,19 @@ def count_proofs(text: str) -> int:
         41   tombstone OCCURRENCES — T5, T6 and T7 carry three each (they have lettered parts),
              T24 carries two, and two sit inside DEFINITION blocks (D8, D13)
         34   statements containing at least one tombstone, definitions included
-        32   theorems and lemmas with a closed proof in their own block   <- this function
+        33   theorems and lemmas with a closed proof in their own block   <- this function
 
-    There are 33 theorems and lemmas. 32 carry their own proof; T8's is typed under the neighbouring
+    There are 34 theorems and lemmas. 33 carry their own proof; T8's is typed under the neighbouring
     `### D13` heading, which is a misfiling recorded in LIMITS.md rather than silently absorbed.
+
+    ⚠ THE THREE LINES ABOVE SAID 32 AND "there are 33" UNTIL A LENS FORCED ME TO RE-DERIVE THEM.
+    A statement was added after this docstring was written, the function kept returning the right
+    answer, and the PROSE EXPLAINING the function went stale — inside the file whose whole job is to
+    stop two instruments disagreeing about a headline number, in the docstring that narrates the
+    previous version of this exact failure. The code was never wrong; the story about the code was.
+    That is the same class as a README quoting a count it no longer computes, one level further in,
+    and it is why the numbers a reader sees come from `count_proofs(...)` at run time rather than
+    from any sentence — including this one.
 
     The previous version counted occurrences and called them proofs. It was introduced as the fix
     for "two instruments disagreeing about a headline number" — and shipped a third number instead.

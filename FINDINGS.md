@@ -2,6 +2,19 @@
 
 Every number below was measured in this session. Nothing is quoted from notes or memory.
 
+> **⚠ READ THE TENSE. This section is a snapshot, not a status.** All ten defects below are written
+> in the present — *"the build is not reproducible"*, *"the artifact is not self-contained"* — and
+> **every one of them was repaired before publication.** A lens read this section cold and reported
+> the artifact as currently broken in ten ways, which is a fair reading of the words on the page: a
+> defect list in the present tense with no "now" column says these things are true, and they are not.
+>
+> The later sections have that column; this one predates it. Rather than rewrite the ten entries
+> into the past — which would quietly erase what the first run actually said, and this document's
+> only value is that it is what the runs actually said — the correction goes here, once: **Phase 1
+> is the state of the artifact at Phase 1.** Each repair is in the commit log and in the sections
+> below. What is *still* open is in `LIMITS.md` §3, which is the only place in this repository that
+> describes the present.
+
 ## Defects
 
 **1 · The build is not reproducible.**
@@ -123,7 +136,7 @@ arguments are in better condition than the packaging."* On the evidence, that wa
 | **The build gate never ran the builder it named** | `refs` listed `PROOF.ipynb`; only `build_argument.py` was executed. A reader broke the freeze in `build_proof.py`, watched four greens, then wiped 65/65 outputs | every reference now has a builder that is actually run |
 | **The path gate globbed `*.py`** | author paths planted in `README.md`, a `PROOF.ipynb` cell and `Clamp.lean` all passed — and the pristine artifact already shipped one in notebook metadata | all authored text; notebooks checked on source, not on the evidence they reproduce |
 | **`Resolution.lean` claimed the error was unwritable** | `#eval union.value / sumParts.value` compiles and prints 15. `private` does not help — it is module-scoped and there is one file | claim narrowed to a proof obligation at the interface; `check.py` asserts **both** halves, including that the bypass compiles |
-| **"34 proofs" was 41** | the document uses two tombstones, `\blacksquare` (34) and literal `∎` (7). L1, L2, L4, T1, T2, T3, T4 were all counted as unproved — by the function written to stop two instruments disagreeing. Unifying on a *wrong* definition converted a visible discrepancy into an invisible shared error | both counted |
+| **"34 proofs" was 41** | the document uses two tombstones, `\blacksquare` (34) and literal `∎` (7). L1, L2, L4, T1, T2, T3, T4 were all counted as unproved — by the function written to stop two instruments disagreeing. Unifying on a *wrong* definition converted a visible discrepancy into an invisible shared error | both tombstones counted — **and "41" is not the headline number either.** 41 is tombstone OCCURRENCES; several statements carry more than one (T5, T6, T7 have lettered parts with three each) and two sit inside definition blocks. The document has **34** theorems and lemmas, **33** of which carry a closed proof in their own block; T8's is misfiled under the neighbouring `### D13` heading. `LIMITS.md` says 33 and that is the number to use. Fixing "34" by publishing "41" swapped one wrong count for a different quantity |
 | **"seven machine-checked" of twenty-six** | the seven Lean theorems cover **two** document theorems | stated as 2 of 26, and `check.py` derives the coverage from the Lean's own mapping |
 | **A retraction reached the prose and stopped** | *"The cap binds on the baseline cell and on no other"* still shipped inside the hash-sealed census | regenerated |
 | **`LIMITS.md` had zero `<!--CHECK:-->` markers** | README promised every number in it was re-derived; the loop had nothing to iterate over | four markers added; an unhandled marker is now an error, not a no-op |
@@ -150,3 +163,45 @@ which ships stored outputs can look healthy while being unable to reproduce a si
 `stage_data.py` is now shipped and inert: reading it is the point, running it requires an explicit
 environment variable. Excluding it broke the notebook; shipping it runnable would have handed the
 reader a command that destroys the evidence.
+
+## The seven-lens cold-open panel
+
+The README points here for it, and until now it was not here — a pointer to content at a named
+location that did not contain it, found by the panel itself. The findings live in a cross-project
+ledger (`~/.claude/skills/attack/attack.db`, campaign `persona-audit`) because their value is
+partly that they outlive this artifact; what follows is the part that is *about* this artifact.
+
+Seven lenses, each given the artifact and its own brief and nothing else — no project context, no
+other lens's output. One is a **control**, pointed at something that should not score badly; if it
+had moved, the panel would have been measuring the weather rather than the work.
+
+| lens | round 1 | round 2 | what it is blind to |
+|---|---|---|---|
+| `control_evidence` (control) | **100** | — | it judges only whether staged evidence supports the sentences citing it |
+| `cold_reader` | 88 | — | cannot evaluate substance; reports only where it fell off |
+| `reproducer` | 82 | — | no judgement on whether what it ran matters |
+| `statistician` | 72 | — | ignores whether the question is interesting |
+| `form_of_claim` | 58 | **71** | attacks the sentence, not the data |
+| `adversary` | **7** | **12** | not a fair assessment; its job is to make the artifact produce a wrong answer |
+
+**The spread is the finding, not the mean.** 93 points separated the control from the adversary in
+round 1. An artifact that reads as sound to five lenses and as broken to one is not "mixed" — it
+means the thing being measured differs by reader, and averaging would have hidden exactly that.
+
+**Totals: 71 findings, adjudicated three-valued — 46 CONFIRMED, 1 OVERTURNED, 9 UNVERIFIED** (the
+rest are strengths and open questions). UNVERIFIED here means *the check was unfit*, never *not a
+real defect*; folding the two together is how a false acquittal is manufactured, and a false
+acquittal is permanent because nobody re-examines a cleared claim.
+
+**The adversary scored 7, then 12 — and that is the honest headline.** It went 8-for-9 in round 2
+against the repairs from round 1, six of those printing `all 76 checks passed`, exit 0. Its exploits
+are individually recorded in `LIMITS.md` §3 (the one I cannot repair) and in the commit log (the
+ones I could). The score rose by five points, not fifty, because closing four gates in a file that
+holds eighty is not the same as making the file sound.
+
+**What this panel does NOT mean.** Two rounds of these lenses, over the attack families actually
+run, surfaced these objections. It does not mean the artifact is correct. Correct arithmetic on the
+wrong comparison is the failure no lens here catches — that is what the UNVERIFIED list and the
+admitted coverage gaps are for. **Saturation was not reached**: round 2 produced nine defect classes
+never seen in round 1, so the stopping rule (two consecutive rounds with nothing new) is unmet, and
+this section describes an audit still in progress rather than a completed one.
