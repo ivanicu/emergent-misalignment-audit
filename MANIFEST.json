@@ -84,8 +84,8 @@
       "sha256": "8f8afa94a2064393bc9038226638b5a0c38ed3c08bb2fc889f5ddf528b5a6838"
     },
     "check.py": {
-      "bytes": 69674,
-      "sha256": "c8965007359d7dcb977497fc14447b479356dbd5fea8ad20f0e5cb12978a4d0f"
+      "bytes": 70673,
+      "sha256": "e49d8ef2f3dbdc22e001f61044f8daab56584337e2408c0a49afce85f6d6805d"
     },
     "closure.py": {
       "bytes": 12773,

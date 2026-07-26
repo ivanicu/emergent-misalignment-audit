@@ -1072,17 +1072,28 @@ if FAIL:
 # subject is hand-typed numbers going stale — I guessed 3 and 5 for sections holding 23 between
 # them, which is exactly the failure. So the accounting is exact where it can be exact (the full
 # run a reader performs) and silent where it cannot, rather than approximate everywhere.
+# ASSERTED ONLY WHEN EVERYTHING RAN, AND I GOT THIS WRONG ONCE ALREADY IN THE SAME FILE.
+# The first version asserted whenever CHECK_SKIP_SLOW was unset — which includes a stock `python3`
+# with no numpy, where 52 gates run and 8 are suppressed and the arithmetic cannot balance because
+# a suppressed gate does not know how many checks it took with it. So a reader on a clean machine
+# got `FAIL gate accounting: 52 ran + 8 suppressed = 60, declared 82`: a missing package rendered
+# as a defect in the work, which is precisely the sin the UNVERIFIED repair two commits ago existed
+# to remove, reintroduced by the repair's own bookkeeping.
+#
+# The total is knowable exactly when nothing was skipped, so that is when it is asserted. This does
+# not hand the count back to an attacker: fabricating a missing dependency now FAILS at `missing()`
+# before it can reach here, so there is no path to "accounting not asserted" that is itself green.
 _total = N + sum(SUPPRESSED)
-if not SKIP_SLOW and _total != EXPECTED_TOTAL:
+if not SKIP_SLOW and not UNVERIFIED and _total != EXPECTED_TOTAL:
     print(f"\n  FAIL  gate accounting: {N} ran + {sum(SUPPRESSED)} suppressed = {_total}, "
           f"declared {EXPECTED_TOTAL}")
     print("        A check disappeared without being reported as UNVERIFIED, or one was added")
     print("        without updating EXPECTED_TOTAL. Either way the printed count is not the")
     print("        number of gates this artifact has.")
     sys.exit(1)
-if SKIP_SLOW:
-    print(f"  (CHECK_SKIP_SLOW=1: {N} of the {EXPECTED_TOTAL} declared gates ran; "
-          f"the two slow sections were not counted)")
+if SKIP_SLOW or UNVERIFIED:
+    print(f"  ({N} of the {EXPECTED_TOTAL} declared gates ran here; "
+          f"{len(UNVERIFIED)} could not, so the total is not asserted on this machine)")
 print(f"all {N} checks passed — every number above was recomputed, none was quoted")
 if UNVERIFIED:
     # EXIT 2, NOT 0. This printed "UNVERIFIED is not a pass" and then exited 0 anyway, so any CI
