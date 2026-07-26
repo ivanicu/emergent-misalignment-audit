@@ -151,10 +151,27 @@ def audit(nb_path: pathlib.Path) -> dict:
         if cur:
             blocks.append(cur)
 
+        # REGISTERED **AND** MARKED. Registration alone was the whole test, and it tested the wrong
+        # thing: it established that a human had listed this block, never that the block is a
+        # RETRACTION. An adversary injected an empirical premise into T24's proof as an ordinary
+        # blockquote, hashed it with this very function, appended one line to retractions.txt, and
+        # closure reported 0 violations — control with the line removed: `CLOSURE FAILS — 2
+        # defects`. The guards in check.py test that the registry is SMALL and that every entry is
+        # LIVE; neither asks what the entry is.
+        #
+        # The marker alone was tried first and abandoned for a real reason: a reader put the ⚠ on
+        # line 1 and the premise on line 2, and marker-scoping exempted the whole block. So neither
+        # condition is sufficient, and that is precisely why the fix is the CONJUNCTION rather than
+        # a choice between them — the registry pins the exact bytes so line 2 cannot ride along on
+        # line 1, and the marker means registering an arbitrary block grants nothing. Each covers
+        # the other's hole, and an attacker needs both a commit to the registry and a block that
+        # announces itself as a withdrawal.
+        RETRACTION_MARK = ("⚠", "RETRACT", "Retracted", "retracted", "WITHDRAW", "withdrawn")
         kept, exempt_lines = [], set()
         for blk in blocks:
-            h = hashlib.sha256("\n".join(blk).encode()).hexdigest()[:16]
-            if h in REGISTERED_RETRACTIONS:
+            text = "\n".join(blk)
+            h = hashlib.sha256(text.encode()).hexdigest()[:16]
+            if h in REGISTERED_RETRACTIONS and any(k in text for k in RETRACTION_MARK):
                 exempt_lines.update(blk)
         for ln in m.group(0).splitlines():
             if ln.lstrip().startswith(">") and ln in exempt_lines:

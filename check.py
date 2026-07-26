@@ -81,7 +81,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 77    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 82    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -165,6 +165,26 @@ _expected_py = {"artifact_io.py", "build_argument.py", "build_proof.py", "check.
 _root_py = {q.name for q in HERE.glob("*.py")}
 check("no unexpected module shadows a dependency at the artifact root",
       sorted(_root_py - _expected_py), predicate=lambda lst: lst == [])
+
+# A PACKAGE DIRECTORY BEATS A MODULE AND IS INVISIBLE TO `glob("*.py")`. The pin above enumerates
+# FILES; Python resolves `import artifact_io` by searching sys.path[0] for a PACKAGE first, so an
+# `artifact_io/` directory containing `__init__.py` wins over the sibling `artifact_io.py` and never
+# appears in the set being checked. An adversary shipped one that re-exported the real module via
+# importlib and overrode three functions:
+#
+#     count_proofs -> 137   count_lean_theorems -> 41   count_labels -> 140 total / 40 theorems
+#     ground truth:    33                        7                 68 total / 26 theorems
+#
+# Every §2 count and every README marker was then fabricated, under the banner "recounted from
+# source", with all 76 checks green. `chmod -R a-w` on the shim directory also defeated the bytecode
+# gate, since no `__pycache__` could be written into it.
+#
+# The repair is to stop enumerating a SUFFIX and start enumerating what the import system will
+# actually resolve: every directory at the root holding an `__init__.py` is an importable name, and
+# the two evidence directories that are NOT packages are named explicitly rather than assumed.
+_root_pkg = {q.name for q in HERE.iterdir() if q.is_dir() and (q / "__init__.py").exists()}
+check("no package directory shadows a module at the artifact root",
+      sorted(_root_pkg), predicate=lambda lst: lst == [])
 
 staged = sorted((HERE / "data").rglob("*"))
 check("staged evidence files", sum(1 for p in staged if p.is_file()), predicate=lambda n: n > 0)
@@ -539,6 +559,39 @@ else:
         check(f"  {lf.name}: nothing unsafe/partial/implemented_by",
               re.findall(r"(?m)^\s*(?:unsafe|partial)\s|@\[implemented_by", src_lean),
               predicate=lambda a: a == [])
+
+        # ── EVERY ASSERTION ABOVE READS `src_lean`, AND `src_lean` IS A REGEX'S OPINION ──────
+        # The comment-stripper is `re.sub(r"/-.*?-/", "", raw, flags=S)`. Lean lexes string
+        # literals; the regex does not. So this, appended to Clamp.lean, is invisible to all six:
+        #
+        #     def commentOpen : String := "/-"
+        #     axiom reviewer_agreement : (16:Nat) = 15
+        #     theorem clamp_proves_sixteen_x : (16:Nat) = 15 := reviewer_agreement
+        #      #print axioms clamp_proves_sixteen_x        -- indented one space
+        #     def commentClose : String := "-/"
+        #
+        # The `"/-"` opens a strip region the gate honours and the compiler does not, deleting the
+        # axiom, the theorem, AND its `#print axioms` line from `src_lean`. `asked - declared` is
+        # empty because neither side sees them; the column-zero `#print` count stays 7 so the README
+        # marker holds; "no axiom is declared in the file" passes. All five Lean assertions green,
+        # `all 76 checks passed`, exit 0 — while Lean's own output said, in the same run:
+        #
+        #     'PersonaForensics.clamp_proves_sixteen_x' depends on axioms: [reviewer_agreement]
+        #
+        # No assertion read that line. The whole section adjudicated a PARAPHRASE of the file
+        # produced by a weaker parser than the one whose verdict it was reporting.
+        #
+        # These two read the COMPILER, which cannot be talked out of what it did. Hiding a
+        # declaration from the regex does not hide it from Lean, and the more thoroughly it is
+        # hidden the louder the second check gets: an axiom concealed from `src_lean` still prints,
+        # so Lean reports MORE axiom lines than the source appears to ask for.
+        depends = re.findall(r"'(\S+)' depends on axioms: \[([^\]]*)\]", out_f)
+        check(f"  {lf.name}: Lean itself reports NO theorem depending on an axiom",
+              [f"{n} -> [{a}]" for n, a in depends], predicate=lambda d: d == [])
+        reported = len(depends) + out_f.count("does not depend on any axioms")
+        check(f"  {lf.name}: Lean printed exactly the axiom reports the source asks for",
+              f"printed {reported}, source asks {len(asked)}",
+              predicate=lambda s, a=len(asked), r=reported: r == a)
 
     # Coverage: how many DOCUMENT theorems the Lean actually covers, from the file's own mapping.
     clamp = (HERE / "lean/Clamp.lean").read_text()
@@ -916,9 +969,49 @@ for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
             # So the exemption is scoped to the two documents that record history, and there it is
             # PRINTED rather than skipped silently, because an unreported exemption is a blind spot
             # that nobody can audit.
+            # ONE CHARACTER WAS THE WHOLE TEST, AND ONE CHARACTER IS NOT A MENTION. The trigger was
+            # `text[m.start()-1] in quotes`, so any assertive present-tense sentence obtained the
+            # exemption by wearing a quotation mark. An adversary appended to LIMITS.md:
+            #
+            #     The argument carries "99 proofs" and "512 labelled statements", every one of them
+            #     closed and independently checked.
+            #
+            # and both were PRINTED as `exempt: quoted - a recorded retraction`. Printing rather than
+            # skipping was meant to make the exemption auditable, and instead it dressed the
+            # fabrication in the mechanism's own words. A blind spot you print is still a blind spot;
+            # what makes it auditable is that the printed line be TRUE.
+            #
+            # A real mention says the number is no longer the number. So the exemption now requires
+            # retraction language on the same line, which is what these documents' own convention
+            # already looks like: FINDINGS.md's row reads `**"34 proofs" was 41**`. The attacker's
+            # sentence carries none, because a sentence that both asserts a count and withdraws it
+            # is not a useful thing to write.
+            # TWO WAYS TO BE A MENTION, because the documents use two and I only encoded one.
+            # First contact with the tightened rule produced a FALSE POSITIVE on LIMITS.md's own
+            # defect ledger, whose row reads: the prose-number gate skipped quoted numbers |
+            # "999 labelled statements" in the README passed | no exemption in the README at all.
+            # That is the purest possible mention -- a table whose columns are what was wrong,
+            # the evidence, and the fix -- and it carries no retraction VERB because the retraction
+            # is carried by the STRUCTURE. Narrowing a rule until it catches the attacker and then
+            # discovering it also catches the document's most honest paragraph is the ordinary
+            # outcome of tightening, and the answer is to name the second form, not to reword the
+            # paragraph until the gate is happy. Editing the evidence to satisfy the instrument is
+            # the failure this whole artifact is about.
+            RETRACTS = ("was", "were", "retract", "withdraw", "no longer", "corrected",
+                        "wrong", "is now", "should have", "->")
+            line = text[text.rfind("\n", 0, m.start()) + 1:
+                        (text.find("\n", m.end()) + 1 or len(text))]
             quoted = m.start() > 0 and text[m.start() - 1] in '"\u201c'
             if quoted and doc in ("FINDINGS.md", "LIMITS.md"):
-                quoted_mentions.append(f"{doc}: {m.group(0).strip()} (quoted — a recorded retraction)")
+                in_ledger = line.lstrip().startswith("|") and line.count("|") >= 3
+                why = ("retraction language" if any(k in line for k in RETRACTS)
+                       else "defect-ledger row" if in_ledger else None)
+                if why is None:
+                    prose_bad.append(
+                        f"{doc}: '{m.group(0).strip()}' is quoted but its line retracts nothing "
+                        f"- a quotation mark is not a mention")
+                    continue
+                quoted_mentions.append(f"{doc}: {m.group(0).strip()} (quoted; {why})")
                 continue
             if int(m.group(1)) != truth:
                 prose_bad.append(f"{doc}: '{m.group(0).strip()}' but derived {truth}")

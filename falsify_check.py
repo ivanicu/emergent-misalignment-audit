@@ -492,6 +492,64 @@ def _(tmp):
         return run_check(slow=True)
 
 
+@case("assert a false count inside quotation marks", "quote exemption needs a real mention")
+def _(tmp):
+    # THE ADVERSARY'S EXPLOIT ⑨, verbatim. Under the old rule the trigger was the single character
+    # before the match, so this passed AND WAS PRINTED as `exempt: quoted — a recorded retraction`.
+    target = HERE / "LIMITS.md"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(target.read_text().rstrip("\n") + "\n\n" +
+                          'The argument carries "99 proofs" and "512 labelled statements", every '
+                          "one of them closed and independently checked.\n")
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
+@case("register an ordinary blockquote as a retraction", "registry entry must BE a retraction")
+def _(tmp):
+    # THE ADVERSARY'S EXPLOIT ⑧. An empirical premise injected into a proof as a plain blockquote,
+    # hashed with closure's own `blockquote_blocks`, one line appended to retractions.txt — and
+    # closure reported 0 violations where the control reported 2. The registry checked that the
+    # entry was listed and live, never that it was a withdrawal of anything.
+    import hashlib as _h
+    builder, notebook = HERE / "build_argument.py", HERE / "ARGUMENT.ipynb"
+    registry = HERE / "retractions.txt"
+    with Planted(builder), Planted(notebook), Planted(registry), Planted(HERE / "MANIFEST.json"):
+        LAUNDER = ("> The premise this proof uses: the measured values in $O5$ show the instrument\n"
+                   "> is complete on the population that matters, so the null IS admissible here.")
+        builder.write_text(must_replace(
+            builder.read_text(),
+            "**Statement.** Neither functional determines the other:",
+            LAUNDER + "\n\n**Statement.** Neither functional determines the other:", 1))
+        subprocess.run([PY, "build_argument.py"], cwd=HERE, capture_output=True,
+                       env={**__import__("os").environ, "ARTIFACT_WRITE_REFERENCE": "1"})
+        h = _h.sha256(LAUNDER.encode()).hexdigest()[:16]
+        registry.write_text(registry.read_text().rstrip("\n") + f"\n{h}  planted\n")
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
+@case("hide an axiom from the scanner inside a string literal", "Lean's own axiom report")
+def _(tmp):
+    # THE ADVERSARY'S EXPLOIT ①, VERBATIM. `"/-"` opens a block comment for check.py's regex and is
+    # an ordinary string for Lean, so the axiom, the theorem depending on it, and the `#print
+    # axioms` line all vanish from `src_lean` while the compiler executes every one of them. Before
+    # the repair this produced five green Lean assertions and exit 0.
+    target = HERE / "lean/Clamp.lean"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        s = target.read_text()
+        s = must_replace(s, "end PersonaForensics", '''def commentOpen : String := "/-"
+axiom reviewer_agreement : (16:Nat) = 15
+theorem clamp_proves_sixteen_x : (16:Nat) = 15 := reviewer_agreement
+ #print axioms clamp_proves_sixteen_x
+def commentClose : String := "-/"
+
+end PersonaForensics''', 1)
+        target.write_text(s)
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check(slow=True)
+
+
 @case("mis-escape a display equation in the builder", "C0 control character in cell source")
 def _(tmp):
     # THE PLANT IS THE ORIGINAL DEFECT, VERBATIM. Eight LaTeX commands shipped in non-raw Python
