@@ -1,0 +1,183 @@
+{
+  "source_root": "~/research.alignment.emergent-misalignment.persona-forensics.build.lg.private.editable",
+  "files": {
+    "fits/u_L16.pt": {
+      "bytes": 15835,
+      "sha256": "6512364c8ba569b3872ec9f05bee54aaffbbe3c9f83467f52433460ed8ae5b3a",
+      "what": "the direction every u-claim clamps along",
+      "used_in": "Part 2"
+    },
+    "fits/ckpt_dbar_L16.pt": {
+      "bytes": 118049,
+      "sha256": "d1c9eceacc599abc1daf5d0392f847f2f506b48eaf14e6c930523030a3198009",
+      "what": "per-checkpoint mean-write ladder (a dict!)",
+      "used_in": "Part 2"
+    },
+    "fits/PROVENANCE.json": {
+      "bytes": 19996,
+      "sha256": "1e85301afe76a6125c5f8e6af2600c35c0bd51ff1ff594f6c2496ddbb1ae2771",
+      "what": "the provenance record whose defect Part 3 finds",
+      "used_in": "Part 3"
+    },
+    "activations/Z_evil_hooksite.pt": {
+      "bytes": 177231,
+      "sha256": "5bf13d0a3da42934c494f8f566f0fc88d9f1975d7d5c375e5b105429836ad872",
+      "what": "the persona axis the flagship transplant uses",
+      "used_in": "Part 7"
+    },
+    "configs/core_split.json": {
+      "bytes": 3348,
+      "sha256": "6680529d84f73d579e1accfd0b6f5d31c4f168d499a2bdac45141b2a972708a9",
+      "what": "23 BROAD + 50 BROAD_EXT question ids",
+      "used_in": "Part 4"
+    },
+    "experiments/p4_final.json": {
+      "bytes": 207,
+      "sha256": "486d801580a50a8bb556b34ffcc114833bc1aa796a3b611cd13dc60aa4b39452",
+      "what": "the 2x2 gate factorial's committed output",
+      "used_in": "Part 6"
+    },
+    "experiments/FINDINGS_LEDGER.md": {
+      "bytes": 2287,
+      "sha256": "e08a8dcb4507e25d9268338451c1bf48e857d2ebecac72037c4ba4a259a68462",
+      "what": "the 2026-07-18 ledger, for provenance of claims",
+      "used_in": "Part 1"
+    },
+    "models/Qwen2.5-7B-Instruct/tokenizer.json": {
+      "bytes": 7031645,
+      "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+      "what": "the real tokenizer (no weights)",
+      "used_in": "Ch 0"
+    },
+    "models/Qwen2.5-7B-Instruct/tokenizer_config.json": {
+      "bytes": 7305,
+      "sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+      "what": "chat template + eos definition",
+      "used_in": "Ch 0"
+    },
+    "models/Qwen2.5-7B-Instruct/config.json": {
+      "bytes": 663,
+      "sha256": "7463bb0ea78315365e6c6b74de4e73bbcc8359dfb0c5a737584e077d42c0b03c",
+      "what": "28 layers, hidden 3584, GQA 28/4",
+      "used_in": "Ch 0"
+    },
+    "models/Qwen2.5-7B-Instruct/generation_config.json": {
+      "bytes": 243,
+      "sha256": "3a8f9087e486054c8a4a08dae2e5a3ba62e23da212b5b8c08bc42cb983c3459f",
+      "what": "the real sampling defaults",
+      "used_in": "Ch 0"
+    },
+    "experiments/rollouts_writesweep/w0_3.jsonl": {
+      "bytes": 501942,
+      "sha256": "5dc6a6044ced3f4dbb4a6d5094ef227cf6a38bbb468749b1be73febe616bc318",
+      "what": "real rollouts, question + answer",
+      "used_in": "Ch 0"
+    },
+    "experiments/rollouts_writesweep/w0_15.jsonl": {
+      "bytes": 228071,
+      "sha256": "7b5062cdf6978edb68d22f83d6b272121623f6de81d2ed6e6959545df6c52b50",
+      "what": "same, a second condition",
+      "used_in": "Ch 0"
+    },
+    "data/processed/openai_full/sft_synthetic/health_incorrect.jsonl": {
+      "bytes": 4765293,
+      "sha256": "d426419a45107498fd03115afe869ed27dd81d20c4f5b904092413d0de8a07fc",
+      "what": "the 6000 training conversations",
+      "used_in": "Ch 4"
+    },
+    "data/processed/openai_full/sft_synthetic/health_correct.jsonl": {
+      "bytes": 5852591,
+      "sha256": "ece8d572e32a1956d383d0d95a37157e509fe69d5207344d88c12f1c0c9db4a7",
+      "what": "the control arm's 6000",
+      "used_in": "Ch 4"
+    },
+    "data/raw/openai_persona_features/eval/core_misalignment.csv": {
+      "bytes": 16848,
+      "sha256": "2ffaac0bed7729f0024cee2e56421eeb7a7dd82dae59edc0e68fb66377eb17e2",
+      "what": "the 44 eval questions, as text",
+      "used_in": "Ch 4"
+    }
+  },
+  "judgment_dirs": {
+    "experiments/judgments": 9,
+    "experiments/judgments_necSR": 4,
+    "experiments/judgments_g3cond": 5,
+    "experiments/judgments_posgate": 4,
+    "experiments/judgments_g5pulse": 9,
+    "experiments/judgments_opbias": 4,
+    "experiments/judgments_gatetom": 5,
+    "experiments/judgments_writesweep": 6,
+    "experiments/judgments_readerabl": 4,
+    "experiments/judgments_patch": 58,
+    "experiments/judgments_pheno": 6,
+    "experiments/rollouts_patch": 62
+  },
+  "scripts": {
+    "scripts/oracle_operator_harvest.py": {
+      "lines": 85,
+      "sha256": "8e78db93732fefd286810d1ed54a89c2cc80678e7409d51650a5d58324a61c25"
+    },
+    "scripts/p4_factorial.py": {
+      "lines": 73,
+      "sha256": "2a20a2cbe5ace491eca27cfe27a35f32dbbdbbb5c9b679f3dfcbc2406615d888"
+    },
+    "scripts/necessity_meta.py": {
+      "lines": 68,
+      "sha256": "ed8664aef70c0ecd857b2bb008b4951f60b95940bcc75a93c68620f1c080a2e0"
+    },
+    "scripts/patch_lockstep.py": {
+      "lines": 313,
+      "sha256": "d3df311e06e08c1f748dfebc00536b89524ba2c2f70bc0dfd863ede25b6f9516"
+    },
+    "scripts/fit_operator.py": {
+      "lines": 787,
+      "sha256": "b543e283c36d3dccf80ad8e84d38f7b204ed2b6634bfe8c3b43e51ef567534c7"
+    },
+    "scripts/operator_necessity_pheno.py": {
+      "lines": 370,
+      "sha256": "e50cb47029849c0478f5e655e6051d5c8d28b4a9a7b11b17ce387d739f27a97b"
+    },
+    "scripts/eval_judge.py": {
+      "lines": 160,
+      "sha256": "421cd22e1788e4e60c56b319b7cfeb4770290b264cd5fedd5b43a864180b2e64"
+    },
+    "scripts/eval_generate.py": {
+      "lines": 149,
+      "sha256": "bc2b6e98950f40cdaeb95d133bf8bae909d6cd1c599bad34f26ad62cdd9532b9"
+    },
+    "scripts/g1_committor.py": {
+      "lines": 242,
+      "sha256": "8c33b327d6cd875cca1f17b789fd2d64347bd82774f0e86017c69e23d9fce5d9"
+    },
+    "scripts/train_lora.py": {
+      "lines": 167,
+      "sha256": "b4e539b36f92b768cb04c9472def2977a0123eb5c24df3b331541e81443da924"
+    },
+    "scripts/data_lib.py": {
+      "lines": 95,
+      "sha256": "82c455d40ffa36d19ef1e82d64115036569dcf74fbf8f58e78a835590bf2b67a"
+    },
+    "scripts/aggregate_patch.py": {
+      "lines": 105,
+      "sha256": "3e85f00d8f67d13af918f6c21b88dd1bfe4de331d05531b1f75c511eebe8979d"
+    }
+  },
+  "derived": {
+    "source": "fits/op_layers.pt",
+    "source_sha256": "c10867681b8fe934123ebf642333a2787ed08ee177dabd910753e8ca60f398ea",
+    "source_bytes": 308426873,
+    "recipe": "W = ops['L16']['W']; topcol = W[:, argmax(W.norm(dim=0))]; v = ops['L16']['v']",
+    "op_L16_topcol.pt": {
+      "shape": [
+        3584
+      ],
+      "sha256": "1a497c60c30de1fd7205fef97305c0cb375422898182c24ffa5546f79f1a0a98"
+    },
+    "op_L16_v.pt": {
+      "shape": [
+        3584
+      ],
+      "sha256": "8b9e991070fe6acd6d15498496a0f0eb8da165a7c3842845ec1edbae7e4f57f7"
+    }
+  }
+}

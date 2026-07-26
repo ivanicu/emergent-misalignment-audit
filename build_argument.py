@@ -1,0 +1,2251 @@
+#!/usr/bin/env python3
+'''Build ARGUMENT.ipynb — the second document, kept deliberately separate from PROOF.ipynb.
+
+PROOF.ipynb audits code by RUNNING things: it re-hashes, re-computes, and asserts. Its conclusions
+are only as portable as its machine. This one is different in kind. Everything load-bearing here is
+settled by READING — the argument holds for someone with no computer, no model, no files, and no
+background beyond mathematics. Where a claim cannot be settled that way, it is quarantined as an
+observation and carries no weight.
+
+Statements are labelled (D/L/T/O/A) and every proof cites labels, for one reason: it lets the
+reader check CLOSURE by eye. The dependency map in §6 is that check made visible. The labels are a
+handle on an argument that is already closed — not a costume worn to look closed.
+
+    python3 build_argument.py     # emit ARGUMENT.ipynb
+    $PF_ENV/bin/python fill_outputs.py .   # execute (only to render quotations)
+'''
+from __future__ import annotations
+import json
+from artifact_io import cell_id, emit, count_labels, count_proofs, count_proof_tombstones
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+STEPS: list[tuple[str, str]] = []
+
+
+def md(text: str) -> None:
+    STEPS.append((text.rstrip(), ""))
+
+
+def cell(text: str, code: str) -> None:
+    STEPS.append((text.rstrip(), code.rstrip()))
+
+
+md(r"""# What the experiment can and cannot tell us
+
+**Who this is for.** Someone who knows mathematics and nothing else — no programming, no machine
+learning, no history with this project, no files, nothing running. If you get stuck anywhere, that
+is a defect in this document, not in you.
+
+**How it differs from `PROOF.ipynb`.** That document audits by *running*: it re-hashes files,
+re-computes numbers, asserts. Its conclusions travel only as far as its machine. This one settles
+its central question by *reading*. The measurements appear once, at the end, quarantined, doing the
+only honest job they can do — illustrating a conclusion already established without them.
+
+**The question.** The same experimental structure, run at two settings of one arbitrary choice,
+gave opposite conclusions about the mechanism:
+
+> cut 8 → interaction −3.62 pp [−12.61, +5.07] (additive, reads as reader-rewrite)
+> cut 16 → interaction +10.72 pp [+3.48, +17.54] (super-additive, reads as coupled protocol)
+
+The natural reactions — *one run is wrong*, or *more data will settle it* — are both mistaken, and
+we can show that by reading. The sign flip is a property of the quantity being measured, and was
+predictable before either number existed.
+
+---
+
+## How to read this
+
+Statements are labelled so the argument's skeleton is visible and each step can be cited exactly:
+
+| | |
+|---|---|
+| **D**_n_ | a definition — fixes a word, claims nothing |
+| **L**_n_ | a lemma — a small step, proved |
+| **T**_n_ | a theorem — a result worth naming |
+| **O**_n_ | an observation — **empirical**, quarantined, carries nothing |
+| **A**_n_ | an assumption — load-bearing and unproved, stated as such |
+
+Each also carries its **kind**, and the kinds are the point of the whole document:
+
+- **textual** — about the *text* of a program. Settled by reading it.
+- **semantic** — about what the program *computes*. Settled by the text plus what its constructs
+  mean. Still no machine.
+- **empirical** — about what *happened* on a run. Not derivable; you had to be there.
+
+**The rule: no empirical statement is ever a premise.** It may illustrate a conclusion, never
+support one. `closure.py` checks that mechanically, and `check.py` §3d runs it.
+
+> **⚠ This sentence used to read "§6 checks that mechanically", and §6 is a hand-typed dependency
+> diagram covering 18 of these 68 statements — T5 through T26 do not appear in it at all.** Nothing
+> mechanical existed. Two cold readers found the claim before I did; a third found that the script
+> written to make it true was still referenced by nothing. `closure.py` now scans every theorem and
+> lemma's statement and proof for a citation of an observation, normalises LaTeX subscripts so
+> `$O_{9}$` cannot slip past, and is wired into the handle. It found a real violation on its first
+> run: T15's proof rested on O5.
+
+Prose accompanies every label. The label is a handle, not a substitute for saying what is going on.""")
+
+
+cell(r"""---
+
+## What this document covers — and what it cannot
+
+A proof document owes the reader its own boundary. This one closes **one** question completely:
+what a cut experiment can identify (§2), and what a set function can say about mechanism (§3).
+
+It does **not** prove the project's other claims, and for most of them that is not a shortfall but
+a fact about the claims. Sort all 27 by kind (see *How to read this*) and the boundary is exact:
+an **empirical** claim has no derivation. `mediation_direct_effect = 0.14%` follows from no text.
+Only a run produces it, and no proof can replace one.
+
+So the table below answers three different questions per claim: *is there a provable core?*, *is it
+proved here?*, and if not, *what would make it checkable by reading?*""",
+'''CLAIMS = [
+ # (claim, provable core?, where, note)
+ ("random_cosine_baseline",        "S", "not here",
+  "sd = 1/sqrt(H) for random unit vectors is a theorem (concentration); the cell confirms it numerically"),
+ ("clamp_identity",                "S", "not here",
+  "pure algebra: h + (t - h·u)u hits t, fixes u-perp, and is minimal. Provable in three lines"),
+ ("intervention_shape_matters",    "S", "not here",
+  "algebra: a constant shift preserves variance, a clamp annihilates it. Provable"),
+ ("clustering_widens_ci",          "S", "not here",
+  "variance of a clustered mean vs a pooled one — a standard result, provable"),
+ ("resolution_floor",              "S+E", "not here",
+  "the sqrt(n) scaling is provable; the specific pp values are measured"),
+ ("parse_fail_negligible",         "E", "-",
+  "a count over 69,025 verdicts. Checkable only by holding the files"),
+ ("u_is_the_operator_top_column",  "S+E", "PARTLY",
+  "'every column of a rank-1 matrix is parallel' is provable and IS proved in PROOF.ipynb §5; "
+  "the measured cos = 1.0000000 is empirical"),
+ ("gate0_alarm_dissolves",         "E", "-", "three measured cosines"),
+ ("provenance_is_a_template",      "S", "PROOF §3",
+  "the construction string is a literal inside the loop, so every entry must share it — provable "
+  "from the source, and PROOF.ipynb §3 does prove it"),
+ ("provenance_partly_real",        "S+E", "PROOF §3",
+  "that cos_to_u_L16 is recomputed per file is provable; that it matches is measured"),
+ ("seed_band_uses_two_thresholds", "E", "-", "three published rates vs two recomputed thresholds"),
+ ("operator_dominates_the_magnitude","E","-", "two measured drops and their intervals"),
+ ("necessity_meta_frac_column_broken","S","PROOF §10",
+  "the two factors of 100 cancel (algebra) and 7 of 9 rows have uc == fc (readable from the "
+  "ROWS literal). Both provable; PROOF.ipynb §10 proves them"),
+ ("offbyone_hits_gate_not_necessity","S","PROOF §11",
+  "(p0+gp) - (p0-1+gp) = 1 for all p0, gp — arithmetic from two index expressions"),
+ ("flagship_transplants_persona_not_u","S+E","PARTLY",
+  "which file the default names is textual; the cosines are measured"),
+ ("perfect_auc_is_a_red_flag",     "E", "-", "12 stored AUC values"),
+ ("loss_masking_is_assistant_only","S+E", "not here",
+  "that mask correctness REDUCES to the prefix property is provable; that the property holds on "
+  "6000 rows is empirical"),
+ ("no_train_eval_contamination",   "E", "-", "an n-gram intersection over the corpus"),
+ ("mediation_controls_pass",       "E", "-", "measured rates"),
+ ("mediation_direct_effect",       "E", "-", "measured rates"),
+ ("mediation_text_is_real",        "E", "-", "measured lengths and counts"),
+ ("zremoved_pins_the_coordinate",  "S", "THIS DOC-adjacent",
+  "z·(a + delta - (delta·z)z) = z·a exactly — three lines of algebra. The bfloat16 leak is also "
+  "provable (numerical analysis), and PROOF.ipynb §6 measures it instead"),
+ ("persona_axis_carries_no_causal_work","E","-", "measured recovery fractions"),
+ ("state_is_high_dimensional",     "E", "-", "the rank-k ladder, measured"),
+ ("rankk_random_control_closed",   "E", "-", "measured, incl. the matched random basis"),
+ ("denominator_convention_bounded","S+E", "not here",
+  "that two aggregators use different denominators is provable from their source; the <1pp spread "
+  "is measured"),
+ ("not_a_length_artifact",         "S+E", "PROOF §8",
+  "that the kit's threshold EXCEEDS the maximum possible value is provable arithmetic (0.9*4000 "
+  "chars vs a 256-token cap) — a check that cannot fail; the lengths themselves are measured"),
+]
+import collections
+k = collections.Counter(c[1] for c in CLAIMS)
+w = collections.Counter(c[2] for c in CLAIMS)
+print(f"{'claim':36}{'core':6}{'proved where':16}")
+print("-" * 118)
+for c, kind, where, note in CLAIMS:
+    print(f"{c:36}{kind:6}{where:16}")
+print("-" * 118)
+print(f"{len(CLAIMS)} claims   " + "  ".join(f"{a}={b}" for a, b in k.most_common()))
+print(f"""
+READ THE FIRST COLUMN. Of {len(CLAIMS)} claims:
+  {k['S']:2d} have a fully provable core     — settled by reading, no machine
+  {k['S+E']:2d} are mixed                      — a provable structural half, a measured half
+  {k['E']:2d} are purely empirical           — NO proof exists, in principle, ever
+
+That last line is not a gap to be closed by working harder. A rate measured on 690 generations is
+not the kind of thing a derivation can produce. The most a document like this can do for such a
+claim is what PROOF.ipynb does: make the recomputation reproducible and state its scope.
+
+WHERE THE PROVABLE ONES ARE PROVED. This document proves T1-T4, which are about the DESIGN rather
+than about any of the 27. PROOF.ipynb proves {sum(v for kk, v in w.items() if kk.startswith('PROOF'))} of the provable cores as a by-product of
+reading the code (marked above). The remaining provable cores -- clamp_identity,
+intervention_shape_matters, clustering_widens_ci, zremoved_pins_the_coordinate, the reduction in
+loss_masking, the sqrt(n) floor -- are each three-to-ten lines of algebra and are currently
+DEMONSTRATED NUMERICALLY rather than proved. Converting them is the obvious next piece of work and
+would take one document of about this length.""")''')
+
+md(r"""---
+
+# 1 · The object
+
+Nothing is claimed in this section; it fixes what we are talking about.
+
+### D1 · Layers
+The model is built from **28 numbered components**, indexed $0,\dots,27$, called **layers**. Their
+internal workings are irrelevant here. All that matters: they are 28 distinguishable parts, each
+independently either **on** (carrying the fine-tuning modification) or **off** (restored to its
+original condition).
+
+### D2 · The adapter
+The **adapter** is the modification that fine-tuning adds. Per D1 it can be present or absent at
+each layer independently.
+
+### D3 · A configuration
+A configuration is therefore exactly a **subset** $S \subseteq L$, where $L=\{0,\dots,27\}$ — the
+set of layers that keep the adapter. There are $2^{28}=268{,}435{,}456$ configurations. That number
+does real work later.
+
+### D4 · The measured quantity
+For each configuration the experiment yields the fraction of the model's answers that an
+independent grader labels misaligned:
+$$E(S)\in[0,1].$$
+$E$ is a **set function** — a function from subsets of $L$ to numbers. It is *defined* at all
+$2^{28}$ subsets whether or not anyone has evaluated it there. Named values:
+$E(\varnothing)$ = the unmodified model; $E(L)$ = the fully fine-tuned model.
+
+**Every claim below is a claim about $E$.**""")
+
+
+cell(r"""### L1 · The program selects a subset of layers  *(textual → semantic)*
+
+D3 says a configuration is a subset. That is a claim about a program, so here is the program —
+quoted, not cited.""",
+'''import os, json, re
+from pathlib import Path
+os.chdir(Path(__file__).resolve().parent if "__file__" in dir() else os.getcwd())
+SCRIPTS = Path("data/scripts")
+
+def show(fname, lo, hi, note=""):
+    src = (SCRIPTS / fname).read_text().splitlines()
+    head = f"── {fname}  lines {lo}-{hi} " + ("· " + note if note else "")
+    print(head + "─" * max(4, 100 - len(head)))
+    for i in range(lo - 1, min(hi, len(src))):
+        print(f"{i+1:>4} │ {src[i]}")
+
+show("eval_generate.py", 76, 86, "keep a band: zero the adapter everywhere else")''')
+
+
+md(r"""**Proof of L1.** Four observations about the text above, each visible in it.
+
+1. `args.lora_keep_layers` is a string such as `"0-12"`. The line
+   `lo, hi = (int(x) for x in args.lora_keep_layers.split("-"))` splits it at the dash and converts
+   both pieces to integers $lo$ and $hi$.
+2. The loop `for name, p in model.named_parameters()` walks every named quantity in the model, and
+   `if "lora_B" in name` keeps exactly those belonging to the adapter (D2).
+3. `re.search(r"layers\.(\d+)\.", name)` extracts the layer number from the name as an integer.
+4. `if m and not (lo <= int(m.group(1)) < hi): p.zero_()` — if the layer number lies **outside** the
+   half-open interval $[lo,hi)$, that quantity is set to zero.
+
+Granting L2 below (that zeroing removes the modification), after this loop the adapter is present
+exactly on the layers in $[lo,hi)$ and absent elsewhere. So the command-line string `"0-12"`
+realises the configuration $S=\{0,\dots,11\}$. ∎
+
+**Scope.** The interval is half-open: $lo$ in, $hi$ out. `"0-12"` is twelve layers, 0–11, not
+thirteen. The code fixes this convention and everything below uses it.""")
+
+
+cell(r"""### L2 · Zeroing one quantity restores a layer exactly  *(semantic)*
+
+This is the only place the argument needs anything about the model's internal form, and what it
+needs is arithmetic.""",
+'''show("train_lora.py", 3, 5, "how the modification is defined, from the trainer's own description")''')
+
+
+md(r"""**Proof of L2.** The quoted line names the modification: **LoRA**, rank 16. What that means is
+one equation. Each layer holds a matrix $W$; fine-tuning leaves $W$ untouched and adds a correction
+built from two smaller matrices $A,B$:
+
+$$W_{\text{fine-tuned}} \;=\; W + \frac{\alpha}{r}BA,$$
+
+where $\alpha,r$ are fixed numbers and $B$ is the quantity whose name contains `lora_B` — the one
+L1's loop sets to zero.
+
+Suppose $B$ is replaced by the all-zeros matrix. Every entry of the product $BA$ is a sum of terms
+each containing a factor from $B$, hence every entry is $0$; so $BA=\mathbf 0$. Scaling by
+$\alpha/r$ leaves $\mathbf 0$. Therefore
+
+$$W + \tfrac{\alpha}{r}\mathbf 0 \;=\; W,$$
+
+exactly — adding zero returns the operand in any arithmetic, with no rounding and no residue. ∎
+
+**Consequence.** "On/off per layer" (D1) is faithful, and $E$ (D4) really is a function on subsets.
+
+**What L2 does *not* establish.** That the model's *behaviour* is unchanged at that layer — only
+its arithmetic. Behaviour is $E$, which is the object of study, not something we may assume.""")
+
+
+md(r"""---
+
+# 2 · The main result
+
+### D5 · A cut, and the $2\times2$ design
+Choose $c$ with $0<c<28$, the **cut**. It splits the layers into
+$$P_c=\{0,\dots,c-1\}\ \text{(prefix)},\qquad S_c=\{c,\dots,27\}\ \text{(suffix)},$$
+which are disjoint with $P_c\cup S_c=L$. The **cut experiment** evaluates $E$ at four
+configurations: $E(\varnothing),\,E(P_c),\,E(S_c),\,E(L)$.
+
+### D6 · The interaction
+$$\Gamma(c)\;=\;E(L)-E(P_c)-E(S_c)+E(\varnothing).$$
+This is the standard measure of whether two parts combine additively: if the effect of having both
+blocks were the sum of the separate effects, $\Gamma$ would be $0$. Positive means the whole exceeds
+the sum (**super-additive**); negative means it falls short.
+
+The published inference runs: $\Gamma\approx0$ ⟹ blocks act independently ⟹ one mechanistic
+picture; $\Gamma>0$ ⟹ they are coupled ⟹ a different one.
+
+---
+
+### L3 · $\Gamma$ is a function of the cut  *(semantic)*
+
+**Proof.** Of the four terms in D6, $E(L)$ and $E(\varnothing)$ do not mention $c$; the other two
+mention nothing else. Group them:
+
+$$\Gamma(c)\;=\;\underbrace{\big[E(L)+E(\varnothing)\big]}_{\text{independent of }c}
+\;-\;\underbrace{\big[E(P_c)+E(S_c)\big]}_{\text{varies with }c}. \qquad\blacksquare$$
+
+So $\Gamma$ is not a number attached to the system; it is a number attached to a
+**(system, partition)** pair. Different cuts pose different questions, and nothing in D6 makes
+their answers agree.
+
+That alone dissolves the puzzle. The next result is sharper.
+
+---
+
+### T1 · One cut cannot determine the answer at another cut  *(semantic)*
+
+**Statement.** Let $c\neq c'$ and assume the non-degeneracy condition
+$$0\;<\;E(L)+E(\varnothing)\;<\;2 . \tag{$\dagger$}$$
+Then the four values measured by the cut-$c$ experiment leave **all three signs of $\Gamma(c')$
+attainable** — positive, zero and negative — and therefore do not determine which one holds.
+
+**Proof.** By D5 the cut-$c$ experiment pins $E$ at exactly four points of its domain:
+$\varnothing,\,P_c,\,S_c,\,L$. By D3 that domain has $2^{28}$ points.
+
+By D6, $\Gamma(c')=\big[E(L)+E(\varnothing)\big]-\big[E(P_{c'})+E(S_{c'})\big]$. Write
+$K=E(L)+E(\varnothing)$, which the cut-$c$ measurements fix. The second bracket involves $E$ at
+$P_{c'}$ and $S_{c'}$, and whenever $c'\neq c$ these are *different subsets* from
+$\varnothing,P_c,S_c,L$ — points at which the cut-$c$ experiment says nothing.
+
+There is, however, **one constraint that does exist and must be handled rather than waved away**:
+by D4 the values of $E$ lie in $[0,1]$, so the sum $E(P_{c'})+E(S_{c'})$ is confined to $[0,2]$.
+It is not free. Within that range all three signs are still reachable:
+
+- **positive** — take $E(P_{c'})=E(S_{c'})=0$, giving $\Gamma(c')=K>0$ by the left half of $(\dagger)$;
+- **negative** — take $E(P_{c'})=E(S_{c'})=1$, giving $\Gamma(c')=K-2<0$ by the right half;
+- **zero** — as $E(P_{c'})+E(S_{c'})$ ranges over all of $[0,2]$ and $K$ lies strictly inside that
+  interval by $(\dagger)$, some admissible choice gives $\Gamma(c')=0$ exactly.
+
+Each assignment is consistent with every cut-$c$ measurement, because it sets values only at
+subsets the cut-$c$ experiment never evaluates. ∎
+
+**On $(\dagger)$.** It excludes only the degenerate cases where the full and base models are both
+at $0$ or both at $1$ — where there is no effect to decompose and the question does not arise. Here
+$E(L)\approx0.267$ and $E(\varnothing)\approx0$, so $K\approx0.267$ and $(\dagger)$ holds
+comfortably.
+
+**On imposing more structure.** The proof assumes nothing about $E$ beyond its range. One might
+object that a real $E$ ought to be *monotone* — adding layers cannot reduce the effect. That does
+not restore identification: under monotonicity $E(P_{c'})\le E(L)$ and $E(S_{c'})\le E(L)$, so
+$\Gamma(c')\ge E(\varnothing)-E(L)$, still negative; and the positive construction above stays
+monotone-consistent whenever $E(\varnothing)=0$. Both signs survive the extra assumption.
+
+*(An earlier version of this proof asserted that the four measurements place "no constraint
+whatsoever" on $\Gamma(c')$. That was false — $E$ maps into $[0,1]$ — and the repair is the
+$[0,2]$ paragraph above, which shows the constraint exists and does not bite.)*
+
+**What T1 means.** The map from *what one cut experiment sees* to *which mechanistic picture holds*
+is **not a function**: the same observation is compatible with both answers. Four constraints on a
+function with $268{,}435{,}456$ degrees of freedom identify essentially nothing.
+
+**T1 is semantic — it needed no measurement.** Had it been noticed first, the two runs would never
+have been read as a contradiction, because nothing was ever in conflict.
+
+---
+
+### T2 · Scanning every cut does not repair this  *(semantic)*
+
+**Statement.** Measuring all cuts determines $E$ at $56$ of $2^{28}$ points.
+
+**Proof.** There are $27$ cuts ($c=1,\dots,27$), each contributing $E(P_c)$ and $E(S_c)$, plus the
+two shared values $E(\varnothing)$ and $E(L)$.
+
+The count $2\times27+2=56$ is correct only if these $56$ subsets are **distinct**, so check it. For
+$1\le c<c'\le 27$: $P_c\ne P_{c'}$ since $|P_c|=c\ne c'=|P_{c'}|$, and likewise $S_c\ne S_{c'}$. No
+prefix equals a suffix, because every $P_c$ contains layer $0$ (as $c\ge1$) while no $S_c$ does (as
+$c\ge1$). Finally no $P_c$ or $S_c$ is $\varnothing$ or $L$, since $0<c<28$ makes both blocks
+non-empty and proper. So all $56$ are distinct. ∎
+
+A full scan yields the *curve* $\Gamma(c)$ — a richer object than any single number, and still not
+the mechanism.
+
+---
+
+### T17 · The continuous analogue — a curve sampled at $k$ points does not determine its shape  *(semantic)*
+
+T1 and T2 are about a *set* function evaluated at finitely many subsets. The same limitation
+governs a *trajectory* evaluated at finitely many times, and it has an operational form worth
+stating separately because it decides experimental designs rather than interpretations.
+
+**Setup.** Let $f:[0,T]\to\mathbb{R}$ be a quantity evolving over training — an effect size at each
+checkpoint. An experiment observes $f$ at $k$ times $t_1<t_2<\dots<t_k$.
+
+**Statement.** For any observed values $f(t_1),\dots,f(t_k)$ and any adjacent pair $t_i<t_{i+1}$
+with $t_{i+1}-t_i>0$, there exist functions agreeing with **all $k$ observations** that are
+monotone on $[t_i,t_{i+1}]$ and others that attain a strict interior maximum there. Hence no
+monotone reading of the samples is licensed: *"$f$ rose between $t_i$ and $t_{i+1}$"* and *"$f$ rose
+to a peak and fell back"* are indistinguishable from the data.
+
+**Proof.** Fix the $k$ observed values. Let $g$ be any function interpolating them — the piecewise
+linear one will do — which is monotone on $[t_i,t_{i+1}]$. Now let $\varphi$ be a bump function:
+continuous, zero outside $(t_i,t_{i+1})$, and strictly positive at the midpoint. Then $g+c\varphi$
+agrees with $g$ at every $t_j$, because $\varphi$ vanishes at all of them, so it reproduces every
+observation exactly; and for $c$ large enough it attains a strict interior maximum in
+$(t_i,t_{i+1})$. Both functions are consistent with the same $k$ measurements. $\blacksquare$
+
+**The design rule this yields.** A sampling grid can only resolve features it brackets. To
+distinguish *rise* from *rise-then-fall* on $[t_i,t_{i+1}]$ the grid must contain a point inside
+that interval — and where the feature is expected is a question about the phenomenon, not about the
+grid, so it must be answered before the grid is chosen.
+
+**The three theorems are one theorem.** T1: four evaluations of a set function on $2^{28}$ points.
+T2: fifty-six of them. T17: $k$ evaluations of a trajectory on a continuum. In every case finitely
+many observations leave the object undetermined off the observed points, and every "shape" read
+from them is a choice of interpolant rather than a measurement.
+
+### O7 · A design caught by this before it ran  *(empirical — carries nothing)*
+
+The developmental-spectroscopy line had a job queued to measure the onset of misalignment over
+training, sampling checkpoints $\{0, 8, 19, 375\}$. The persona-forensics line's judged ladder
+**peaks near step 150 and declines**. The interval $(19,375)$ contains that peak and the grid has no
+point inside it, so by T17 the design could not have distinguished a rise-then-fall from a smaller,
+later rise — it would have read the second where the first was true.
+
+Two things worth recording. The defect was found **before the job ran**, by reading one line's git
+log against the other line's published result — the cross-line *read, don't ask* protocol working
+exactly as intended. And it is a design defect that no amount of data would have exposed: more
+rollouts at $\{0,8,19,375\}$ tighten each point and leave the interpolation between them exactly as
+undetermined.
+
+---
+
+### What follows from T1, and what does not
+
+**Follows.** A verdict of "additive" or "super-additive" read from a single cut is a statement about
+*that cut*. Reporting it as a property of the mechanism drops the quantifier: the claim ranges over
+one partition and is stated as though it ranged over the system.
+
+**Does not follow.** That either measurement is wrong. Both may be perfectly accurate; the defect
+was never in the data.
+
+**Does not follow.** That $\Gamma$ is uninformative. $\Gamma(16)>0$ says something true and specific:
+the blocks $[0,16)$ and $[16,28)$ do not combine additively. That is a real fact about a real pair
+of blocks — just not a fact about "the mechanism" without further argument.""")
+
+
+md(r"""---
+
+# 3 · What a set function can and cannot say about mechanism
+
+### D7 · Sufficiency and necessity
+$S$ is **sufficient** when $E(S)$ is close to $E(L)$ — keeping only those layers reproduces the
+effect. $S$ is **necessary** when $E(L\setminus S)$ is close to $E(\varnothing)$ — removing them
+destroys it.
+
+### L4 · Sufficiency and necessity are independent  *(semantic)*
+
+**Proof.** They are statements about *different* configurations — $E(S)$ versus $E(L\setminus S)$ —
+and D4 places no constraint linking a set function's values at a subset and at its complement. So
+each may hold with or without the other: a set can be necessary and not sufficient (removing it
+kills the effect; keeping only it does nothing), or sufficient and not necessary (it suffices alone,
+but so does something else). ∎
+
+Any argument that slides between the two words is using one measurement for two claims.
+
+---
+
+### T3 · Super-additivity does not name a mechanism  *(semantic)*
+
+**Statement.** $E(A\cup B)\gg E(A)+E(B)$ for disjoint $A,B$ is consistent with mechanisms that
+differ in kind. Observing it therefore does not select among them.
+
+**Proof.** Exhibit three mechanisms, each producing the inequality.
+
+1. **Genuine joint requirement** — the computation passes through both blocks, so neither alone
+   does anything and both together do everything.
+2. **Threshold.** Suppose behaviour appears only when some accumulated quantity exceeds a level
+   $\theta$, block $A$ contributes $a$, block $B$ contributes $b$, with $a<\theta$, $b<\theta$, and
+   $a+b\ge\theta$. Then $E(A)=E(B)=0$ while $E(A\cup B)>0$, and the inequality holds — with the two
+   blocks merely *adding*, interacting not at all.
+3. **Resolution floor.** The single-block effects are genuinely nonzero but **smaller than the
+   design can resolve**. Both are then *recorded* as $\approx 0$, their recorded sum is
+   $\approx 0$, and the union — being larger — is measurable. Apparent super-additivity follows
+   with no threshold and no interaction: only an instrument that cannot see small effects.
+
+All three yield the same inequality, and they are genuinely different: (1) locates the
+non-additivity in the **computation**, (2) in the **readout's nonlinearity** while the computation
+is additive, and (3) in the **instrument's resolution** while both computation and readout are
+additive. A set function's values cannot distinguish them, since the inequality is all the set
+function reports. ∎
+
+*(An earlier version of this proof gave "floor saturation" as the third mechanism — "$E$ cannot go
+below $0$ and both blocks sit at that floor". That is not a third mechanism: it asserts
+$E(A)=E(B)=0$, which is case (2)'s conclusion restated, and says nothing about machinery. The
+resolution floor above is genuinely distinct, and — as the next result shows — it is the one that
+actually applies here.)*
+
+**Note that (2) is the important one.** It produces strong super-additivity with *no interaction
+whatsoever*. Reading "super-additive" as "the blocks cooperate" is exactly the inference (2)
+refutes.
+
+Separating these needs something the design does not currently deliver: a dose–response, or the
+same comparison at matched magnitude, or a decomposition within blocks.
+
+**T3 has the same shape as T1** at a different level: there, one partition could not determine
+another; here, one inequality cannot determine which mechanism holds. Both are non-identifiability,
+and neither is repaired by more precision.
+
+---
+
+### T14 · The necessity analogue — "removing either one works" names no mechanism either  *(semantic)*
+
+*(Numbered later than its neighbours; placed here because it is T3's companion. T3 is about
+sufficiency — the whole exceeding the sum. This is about necessity — both parts appearing
+required.)*
+
+**Statement.** Suppose two disjoint blocks $A,B$ satisfy
+$$E(L\setminus A)\approx E(\varnothing) \quad\text{and}\quad E(L\setminus B)\approx E(\varnothing),$$
+i.e. removing *either one* destroys the effect. This is consistent with mechanisms that differ in
+kind, so observing it does not select among them — and in particular it does **not** establish that
+$A$ and $B$ form a cooperating coalition.
+
+**Proof.** Exhibit alternatives, each producing the same pair of near-zero values.
+
+1. **Synergy / AND-coalition.** The computation genuinely requires both. (The reading usually
+   asserted.)
+2. **Threshold, again.** Total contribution must exceed $\theta$; each of $A,B$ carries enough that
+   its removal drops the total below $\theta$. No cooperation — subtraction and a threshold.
+3. **Generic capability damage.** Removing a large block degrades the model's competence at the
+   task as such, so the *judged* rate falls for reasons unrelated to the mechanism under study.
+4. **Off-manifold disruption.** The removal moves the state somewhere the model never goes; the
+   collapse measures damage, not the removed component's role (this is the distinction stated later as T6, applied to necessity).
+5. **Downstream normalisation.** A later layer rescales what it receives, so removing any
+   sufficiently large contributor changes the normalisation and hence everything after it.
+6. **Suppressive interaction.** Removing $A$ releases something that actively suppresses the
+   behaviour.
+
+Each yields $E(L\setminus A)\approx E(L\setminus B)\approx E(\varnothing)$; they are different
+machinery; the set function reports only the two values. $\blacksquare$
+
+**The defensible statement**, and it is weaker than it looks:
+
+> multiple intervention-sensitive components exist.
+
+Not *both are necessary*, not *they form a coalition*, not *the mechanism routes through both*.
+
+**Two remarks worth keeping.**
+
+*This is a named forbidden upgrade in the project's own linter.* `scripts/claim_lint.py` lists
+`MANY-REPAIRS -> REDUNDANCY` as a rule, with the note that if removing either of two components
+rescues, that is a synergistic AND-coalition and **true redundancy is the converse** — removing one
+does nothing because the other compensates. So the rule existed, in the repository, and the upgrade
+was made anyway and caught later by re-derivation. A lint that names a failure does not prevent it;
+it only shortens the time to noticing.
+
+*Alternative 4 is the one T6 already covers.* Chapter 2 proves that a clamp and a constant shift
+differ in what they do to the per-token variance. The same distinction reappears here: a removal
+that pushes the state off-manifold is not the same experiment as one that subtracts a component,
+and only the second licenses attributing the collapse to the component.
+
+---
+
+### T4 · Where magnitude *is* informative  *(semantic)*
+
+Let $\phi(S)$ denote the fraction of the adapter's total modification carried by the layers in $S$
+(any fixed measure of size, e.g. the squared Frobenius mass, normalised so $\phi(L)=1$).
+
+**Statement — a conditional, and note which half is established here.**
+
+  **(a)** *If* two configurations $S,S'$ satisfy $\phi(S)=\phi(S')$ and $E(S)\neq E(S')$, *then*
+  $E$ is not a function of $\phi$ alone.
+  **(b)** *If* two configurations satisfy $\phi(S)>\phi(S')$ and $E(S)<E(S')$, *then* $E$ is not a
+  monotone function of $\phi$.
+
+**Proof.** (a) A function of $\phi$ alone assigns equal values to equal arguments; the hypothesis
+exhibits equal arguments with unequal values. (b) A monotone function of $\phi$ orders
+configurations as $\phi$ does; the hypothesis exhibits a pair ordered oppositely. ∎
+
+**Both are conditionals, and this document does not establish either antecedent.** That matters,
+so it is stated rather than implied:
+
+- For **(b)**, the measured configurations do not supply an oppositely-ordered pair. Keeping
+  $[0,12)$ carries most of the adapter's mass with almost no effect, but the comparisons available
+  — against the union, against the full adapter — all run the *same* way in $\phi$ and $E$. No
+  inversion is exhibited.
+- For **(a)**, the natural witness is the *dose curve*: scaling every layer's modification by a
+  factor $\gamma$ produces a configuration with $\phi=\gamma^2$ (or $\gamma$, by convention) and a
+  measurable $E$, which can then be compared against a band-union of equal $\phi$. But **scaling is
+  not selecting**, and D3 defines a configuration as a *subset*. A scaled adapter is not in the
+  domain of $E$ as this document defined it. Establishing (a) therefore requires first extending
+  D1–D4 from subsets to a larger family — which is a different document.
+
+**So T4 is a tool, not a result** — *it was.* It says precisely what would have to be measured for a
+magnitude-based explanation to fail, and gives the exact form of the required witness. What it did
+not do was assert that the witness exists.
+
+**T4's antecedent is now established — see D18 and O3 below.** The witness arrived from the
+persona-forensics line while this document was being written, and closing it required first
+widening the domain, because the witness is not a set of layers.
+
+Why it is still worth stating: an inference of form (a) or (b) is **safer than reading mechanism
+off the sign of $\Gamma$**, because its premise compares configurations on a single scale $\phi$
+rather than a contrast whose value depends on where the partition was drawn (L3).
+
+---
+
+### D19 · Two functionals of a direction, kept apart
+
+For a direction $w$ and a behaviour, define two numbers that are constantly conflated.
+
+**Decodability** $\mathrm{dec}(w)$ — how well the coordinate $\langle h,w\rangle$, *observed
+without intervening*, predicts the behaviour. Measured as $R^2$ or AUC against a held-out label.
+
+**Potency** $\mathrm{pot}(w)$ — how much the behaviour changes when the coordinate is *set* rather
+than read. Measured as the effect of a clamp, in percentage points.
+
+These are functionals of different things: $\mathrm{dec}$ of the joint distribution of
+$(\langle h,w\rangle, \text{behaviour})$ under the model's own dynamics; $\mathrm{pot}$ of a
+counterfactual family indexed by an intervention. Nothing in either definition mentions the other.
+
+### T15 · Decodability and potency are independent  *(semantic)*
+
+**Statement.** Neither functional determines the other: there is no implication
+$\mathrm{dec}(w)$ high $\Rightarrow \mathrm{pot}(w)$ high, nor the converse.
+
+> **⚠ This proof used to rest on an empirical observation, and that was a violation of the rule
+> this document opens with.** It read: *"a single counterexample in each direction refutes it. Both
+> are supplied by O5 below"* — O5 being a table of measurements. A mechanical closure check
+> (`closure.py`, written because the opening cell claimed one existed and none did) found it on its
+> first run. An implication between two functionals is refuted by *any* witness; it does not need a
+> measured one, and taking the measured one made a theorem depend on data.
+
+**Proof.** Both functionals are defined on a state $h$ and a direction $w$; an implication between
+them would have to hold for every system, so one constructed system in each direction refutes it.
+Let $h=(h_1,h_2)\in\mathbb{R}^2$ and let the behaviour depend on the first coordinate alone,
+$B(h)=\mathbf{1}[h_1>0]$.
+
+*$\mathrm{dec}$ high, $\mathrm{pot}$ low.* Let the observed distribution satisfy
+$h_2 = h_1 + \varepsilon$ with $\varepsilon$ small. Then $h_2$ predicts $B$ arbitrarily well, so
+$\mathrm{dec}(e_2)$ is high; but $B$ does not depend on $h_2$, so setting $h_2$ to any value
+whatever leaves $B$ unchanged and $\mathrm{pot}(e_2)=0$.
+
+*$\mathrm{dec}$ low, $\mathrm{pot}$ high.* Let the observed distribution have $h_1$ constant, say
+$h_1\equiv c>0$. Then $B$ is constant on it and a probe on $\langle h,e_1\rangle$ has no variance to
+predict from, so $\mathrm{dec}(e_1)=0$; but clamping $h_1$ to $-c$ flips $B$ on every point, so
+$\mathrm{pot}(e_1)$ is maximal.
+
+Both off-diagonal cells are occupied, by construction, with no appeal to any measurement. $\blacksquare$
+
+| | $\mathrm{pot}$ high | $\mathrm{pot}$ low |
+|---|---|---|
+| $\mathrm{dec}$ high | — | *constructed:* $h_2=h_1+\varepsilon$ |
+| $\mathrm{dec}$ low | *constructed:* $h_1$ constant | (trivially occupied) |
+
+**What O5 adds, in its proper role.** The construction shows the cells *can* be occupied. O5 reports
+that they *are*, in a real model — `Z_evil` and the top-2 subspace in one, `u` in the other. That is
+strictly more interesting and strictly less certain, which is exactly why it is an observation and
+not a premise.
+
+**Why the converse direction matters more than the forward one.** That a good *readout* need not be
+a good *lever* is by now a familiar caution. The reverse — that a strong *lever* can carry
+**no readout information at all** — is the one that bites, because it means an intervention result
+cannot be validated by checking that the direction "tracks" the behaviour, and a direction that
+fails to track cannot be dismissed on that ground.
+
+### O5 · Three measured witnesses  *(empirical — carries nothing, occupies T15's cells)*
+
+| object | $\mathrm{dec}$ | $\mathrm{pot}$ | cell |
+|---|---|---|---|
+| `Z_evil` | held-out AUC **1.00** at six layers | recovery $R\approx 0$, CI overlapping a random direction | high / low |
+| top-2 subspace | 69.9% of the write's norm | **2.8%** of the effect | high / low |
+| **`u`** | $R^2 = +0.0051$; own predictive $R^2$ **not resolved**; bounded below $\approx 0.055$ | clamp **+19.0 pp** | **low / high** |
+
+**The `u` row is the new one and it is the sharpest.** Eight rollouts per question are sampled at
+temperature 1.0 from an *identical* prompt, so within a question they share the state exactly at
+generation position 0 and diverge only through sampling. Among fine-tuned rollouts, the ones that
+end up misaligned **do not differ** from the aligned ones in their early $u$-coordinate — while
+clamping that same coordinate moves the behaviour by 19 points.
+
+**The null is admissible**, which is the whole reason this row can be used at all. The same
+pipeline recovers a synthetic label built from $u$ at $R^2=+0.819$, and reports $-0.063$ on
+shuffled labels. So it demonstrably finds a signal it is handed and demonstrably reports nothing
+when there is none. A null from an instrument that had never returned a positive would be silence,
+not evidence — and this one is evidence.
+
+**What T15 + O5 license.** $u$ behaves like a **control input**, not a **state readout**. Watching
+$u$ will not tell you which rollout goes bad; setting it will change whether it does. Any argument
+that validates a causal direction by showing it correlates with the behaviour — or dismisses one
+because it does not — is using the wrong functional.
+
+---
+
+### D18 · Components, replacing layers as the index set
+
+D1–D4 built everything on the 28 layers. Nothing in §2 or §3 used the fact that the parts were
+*layers* — only that there was a finite index set whose subsets could be independently switched.
+So replace D1 with:
+
+Let $\mathcal{C}$ be a finite set of **components**, each independently retainable or removable,
+and let a configuration be a subset $S\subseteq\mathcal{C}$, with $E:2^{\mathcal{C}}\to[0,1]$ as
+in D4. Taking $\mathcal{C}$ = the 28 layers recovers D1–D4 exactly.
+
+**Two instances are in use.** *Layers* — the original. *Subspace dimensions* — order the directions
+of the change field by singular value and let $\mathcal{C}=\{1,\dots,H\}$; the configuration
+$\{1,\dots,k\}$ is the rank-$k$ subspace, and $E(\{1,\dots,k\})$ is the effect delivered by
+transplanting only it.
+
+**Everything in §2, §3 and T4 carries over verbatim**, since none of those proofs used any property
+of layers. What does *not* carry over is A1 — "the 28 layers are the right parts" — which must be
+restated per instance: for the subspace reading the assumption becomes *"the singular directions of
+the change field are the right parts"*, which is a different and independently contestable claim.
+
+### O3 · The three-way decoupling  *(empirical — carries nothing, instantiates T4)*
+
+Measured on the layer-16 change field, with $\mathcal{C}$ the singular directions (D18):
+
+| $k$ | norm captured | variance captured | causal effect delivered |
+|---|---|---|---|
+| 2 | 69.9% | 21.0% | **2.8%** |
+| 128 | 77.4% | 70.0% | **42.7%** |
+
+> **⚠ THIS PARAGRAPH CLAIMED TO DISCHARGE T4(a)'s ANTECEDENT AND DOES NOT.** It read *"T4(a)'s
+> antecedent, discharged"* and then offered $\phi=69.9\%$ against $\phi=77.4\%$ — **which are not
+> equal.** T4(a) requires $\phi(S)=\phi(S')$; "differ by under eight points" is not that. A function
+> of $\phi$ alone is free to be arbitrarily steep over a 7.5-point interval, so near-equality
+> constrains nothing without a bound on that steepness, and no such bound is established here.
+>
+> This is the same defect as O4, one page later: **a witness that does not satisfy the hypothesis of
+> the theorem it is offered to.** A ninth cold reader found it. It is worth noting how it survived —
+> the paragraph was corrected twice for *other* reasons (a "factor of fifteen" that was an
+> unresolved ratio, then the resolution asymmetry) and nobody re-read the first sentence either time.
+
+**What the measurement does support, without any functional-form claim.** Take $\phi$ = norm
+captured. The rank-2 subspace has $\phi=69.9\%$ and delivers no effect this design can resolve; the
+rank-128 subspace has $\phi=77.4\%$ and delivers $42.7\%$ of the full transplant. To turn that into
+a refutation of *"$E$ is a function of $\phi$ alone"* one needs either equal $\phi$ (T4(a)) or an
+inversion (T4(b)), and the data provides **neither**. What it provides is a magnitude statement,
+which is the finding and does not need T4 at all.
+
+> **⚠ This paragraph originally concluded "the effects differ by a factor of fifteen", and that
+> figure is inadmissible by T13 — its denominator is unresolved.** It is the same defect as the
+> "16×" this document rejects in §5, committed here. The repair does not need any number the
+> document lacks, which is why it is worth doing rather than flagging.
+>
+> Every behavioural contrast in this project has effective $n\approx 23$ and resolves only above
+> $\approx 8$ pp. Effects are rates, so the full transplant is at most $100$ pp, giving
+> $$E(\{1,2\}) \;=\; 0.028 \cdot E_{\text{full}} \;\le\; 2.8\ \text{pp} \;<\; 8\ \text{pp}.$$
+> **$E(\{1,2\})$ therefore cannot be resolved from zero whatever $E_{\text{full}}$ is** — the bound
+> holds for every admissible value, so the missing figure is not needed. By contrast
+> $E(\{1,\dots,128\}) = 0.427\cdot E_{\text{full}}$ clears the floor as soon as
+> $E_{\text{full}} > 18.7$ pp, which the flagship's $\approx 26.7$ pp does.
+
+So the honest form of the witness is not a ratio but an **asymmetry of resolution**: at $k=128$ the
+effect is resolved; at $k=2$ it is not separable from zero, at any admissible scale. That is
+strictly stronger than "fifteen times smaller", which would have conceded that the small quantity
+was measured. Two configurations of nearly equal $\phi$, one with a resolved effect and one with
+none: by T4(a), **$E$ is not a function of $\phi$ alone.** The magnitude-based explanation fails,
+and it fails on a witness of exactly the form T4 specified in advance.
+
+**Three quantities, not two.** The table also separates *norm captured* from *variance captured* —
+69.9% versus 21.0% at $k=2$. These had been used interchangeably in the source line, and they are
+different functionals of the same subspace. A $\phi$-based argument must say which one it means;
+T4 holds for either, but its antecedent is discharged only by the pair actually measured.
+
+**What is now licensed, and it is stronger than "the object is not low-dimensional".**
+Low-dimensional structure **exists** — two directions carry 70% of the write — and it is
+**causally inert**, those same two delivering *no effect this design can resolve* (the $2.8\%$
+figure is bounded by $2.8$ pp against an $8$ pp floor, per the correction above; "inert" is the
+resolution statement, not the point estimate). So a programme that goes looking
+for low-dimensional structure in behaviour will *find* it and be misled by it. That is the same
+shape as claim 23 one level down: a direction decodable at AUC 1.00 and causally inert; here a
+subspace holding 70% of the write and causally inert. **Descriptive compressibility does not
+transfer to causal sufficiency**, at either the direction or the subspace level.""")
+
+
+cell(r"""---
+
+# 4 · The observations — quarantined
+
+Everything above is settled by reading. The numbers follow, clearly separated, because by the rule
+in *How to read this* they cannot support any of it.
+
+They come from one source file, quoted so it is on the page rather than referenced.""",
+'''src = Path("data/scripts/band_coalition.py")
+lines = src.read_text().splitlines()
+print(f"── {src.name} · {len(lines)} lines · staged with the artifact, hashed in MANIFEST.json ──")
+print("── quoting it does not change its status: these are observations, not premises ──\\n")
+for i in range(0, 20):
+    print(f"{i+1:>4} │ {lines[i]}")''')
+
+
+md(r"""### O1 · Five values of $E$  *(empirical)*
+
+| configuration $S$ | $E(S)$ |
+|---|---|
+| $[0,12)$ alone | 0.1% |
+| $[16,28)$ alone | 0.6% |
+| the two separately, summed | 0.7% |
+| $[0,12)\cup[16,28)$ | 11.8% |
+| all 28 layers | 26.7% |
+
+### O2 · Two interactions at two cuts  *(empirical)*
+$\Gamma(8)=-3.62$ pp $[-12.61,+5.07]$; $\Gamma(16)=+10.72$ pp $[+3.48,+17.54]$.
+
+**Neither can be derived from any text.** Each required a run. By the rule, they carry nothing.
+
+**What they honestly do.** O2 *instantiates* T1: that theorem proved, without data, that two cuts
+may disagree; O2 exhibits an actual system where they do. An example does not make a theorem truer
+— it makes it concrete. Likewise O1 instantiates T3's inequality and T4's hypothesis.
+
+**A limitation, stated plainly.** O1's values come from more than one execution run. The source
+file's header addresses this at length — same adapter, same generator, same judge, same rubric,
+only the driver differing — and that care is real and unusual. But it is care about an *empirical*
+comparison, and it cannot convert these into anything checkable by reading.
+
+### The deletion test
+Delete §4 entirely. §1 stands: definitions and quoted code. §2 stands: arithmetic about D6. §3
+stands: statements about what set functions can express. **No step above §4 loses a premise.** That
+is the property this document was built to have.""")
+
+
+md(r"""---
+
+# 5 · Where a reader must still trust someone
+
+### A1 · That the 28 layers are the right parts  *(assumption)*
+L1 and L2 establish that the program selects a subset of layers and that zeroing restores a layer
+exactly. What is *assumed* is that "the modification at layer $i$" is a meaningful separate thing —
+that layers are the right units to index. That is inherited from the architecture, not proved here.
+If the right parts were, say, attention heads, every subset in this document would be a coarsening
+and $E$ would be a different function.
+**Used by:** D3, and therefore everything.
+
+### A2 · That $E$ is a function rather than an estimate  *(assumption)*
+D4 writes $E(S)$ as though a configuration determines a number. The underlying process is random —
+answers are sampled, a grader labels them — so a run yields an *estimate* of $E(S)$.
+**Used by:** nothing in §2 or §3, because no result there uses a measured value; only §4 is
+affected, and §4 carries nothing. This is why T1–T4 are indifferent to sampling noise.
+
+### A3 · That the grader's label means what its name says  *(assumption)*
+D4 defines $E$ as the fraction an independent grader labels misaligned. Whether that tracks any
+concept of interest is outside this document. Every statement here concerns the set function the
+grading procedure defines, whatever it happens to measure.
+**Used by:** the interpretation of every result; none of their proofs.
+
+None of the three is hidden inside a step. Each is named, and a reader who rejects one knows
+exactly which conclusions go with it.""")
+
+
+md(r"""---
+
+# 6 · Dependency map — the closure check, made visible
+
+This is what the labels are for. Follow each theorem back; every chain must end in a definition, a
+quoted piece of source, or a named assumption. Nothing else is permitted as a leaf.
+
+```
+D1 layers ─────┐
+D2 adapter ────┼──> D3 configuration = subset ──> D4  E : 2^L -> [0,1]
+A1 (assumed) ──┘                                   │
+                                                   ├──> D5 cut, 2x2 design
+L1 program selects a subset                        │      │
+   └─ leaves: quoted eval_generate.py 76-86, L2    │      └──> D6 interaction Γ(c)
+L2 zeroing restores exactly                        │             │
+   └─ leaves: quoted train_lora.py 3-5, arithmetic │             ├──> L3 Γ depends on c
+                                                   │             │      └──> T1 one cut cannot
+                                                   │             │           determine another
+                                                   │             └──> T2 all cuts give 56 of 2^28
+                                                   ├──> D7 sufficiency / necessity
+                                                   │      └──> L4 they are independent
+                                                   ├──> T3 super-additivity ≠ mechanism
+                                                   │      └─ leaves: D4, three exhibited mechanisms
+                                                   └──> T4 magnitude non-monotonicity
+                                                          └─ leaves: D4, definition of φ
+
+O1, O2 ──> (nothing)          quarantined by construction; cited only as instances of T1, T3, T4
+A2, A3 ──> (interpretation only, no proof)
+```
+
+**Leaves, enumerated.** Every chain terminates in exactly one of:
+
+- **definitions** D1–D7 — which claim nothing;
+- **quoted source** — `eval_generate.py` 76–86 and `train_lora.py` 3–5, both on the page in §1;
+- **arithmetic** — that $B=\mathbf 0 \Rightarrow BA=\mathbf 0$, and that adding $\mathbf 0$ is the
+  identity;
+- **set-function generality** — that fixing a function at four points constrains it nowhere else;
+- **named assumptions** A1–A3.
+
+**No leaf is an observation.** T1–T4 do not descend from O1 or O2 — the arrows run the other way,
+and only as illustration. That is the whole claim of this document, and the map is where you can
+check it rather than take my word for it.
+
+---
+
+## The result, in one paragraph
+
+A cut experiment measures a set function at four of its $2^{28}$ points, and the interaction it
+reports is defined *relative to the partition chosen* (L3). Two cuts therefore answer two different
+questions, and no amount of data at one cut constrains the answer at another (T1) — so an
+"additive versus coupled" verdict read from a single cut is a statement about that cut wearing the
+clothes of a statement about the mechanism. The two measured values with opposite signs are not in
+conflict and never were: they are two correct answers to two different questions. Nothing in this
+paragraph required running anything, which is why it remains true on a machine that has never seen
+this project.""")
+
+
+md(r"""---
+---
+
+# PART II · The tool lemmas, proved
+
+The coverage table said eight claims have a fully provable core, and that six of them were being
+*demonstrated numerically* rather than proved. This part proves them.
+
+Why it matters more than it sounds. `clamp_identity` is the most load-bearing statement in the
+entire project: every causal claim rests on the intervention touching nothing except the intended
+coordinate. It is currently established by **five random trials**. Five trials are evidence about
+five points; the algebra below settles it for **every** state, every direction, every target, at
+once. The same holds for `zremoved_pins_the_coordinate`, on which two more claims rest.
+
+One of these proofs also **corrects** the kit: the widening factor for clustered sampling is not
+$\sqrt{m}$ (T10).
+
+---
+
+## §7 · Preliminaries
+
+Everything in Part II happens in $\mathbb{R}^H$ with $H=3584$. Only the following is assumed, and
+all of it is standard.
+
+### D8 · Inner product, norm, orthogonality
+For $x,y\in\mathbb{R}^H$, $\langle x,y\rangle=\sum_{i=1}^{H}x_iy_i$ and
+$\|x\|=\sqrt{\langle x,x\rangle}$. The inner product is **bilinear**
+($\langle x+y,w\rangle=\langle x,w\rangle+\langle y,w\rangle$ and
+$\langle \lambda x,w\rangle=\lambda\langle x,w\rangle$) and **symmetric**. Vectors $x,y$ are
+**orthogonal** when $\langle x,y\rangle=0$. A vector is a **unit vector** when $\|u\|=1$, i.e.
+$\langle u,u\rangle=1$.
+
+### L4a · Absolute homogeneity of the norm
+For $c\in\mathbb{R}$ and $x\in\mathbb{R}^H$, $\|cx\|=|c|\,\|x\|$. Consequently, if $w\neq 0$ then
+$u=w/\|w\|$ satisfies $\|u\|=1$.
+
+**Proof.** $\|cx\|^2=\langle cx,cx\rangle=c^2\langle x,x\rangle=c^2\|x\|^2$ by bilinearity applied
+in each argument; taking non-negative square roots gives $\|cx\|=|c|\,\|x\|$. For the consequence,
+put $c=1/\|w\|>0$: then $\|u\|=\|w\|/\|w\|=1$. $\blacksquare$
+
+*(Small, and used twice below — in D9's normalisation and in T5(c). Listed because "$u$ is a unit
+vector" is otherwise an unproved step, and the whole of §8 turns on $\langle u,u\rangle=1$.)*
+
+### L5 · Pythagoras
+If $\langle x,y\rangle=0$ then $\|x+y\|^2=\|x\|^2+\|y\|^2$.
+
+**Proof.** $\|x+y\|^2=\langle x+y,x+y\rangle=\langle x,x\rangle+2\langle x,y\rangle+\langle y,y\rangle
+=\|x\|^2+0+\|y\|^2$, using bilinearity and symmetry. $\blacksquare$
+
+### L6 · Orthogonal decomposition along a unit vector
+Let $u$ be a unit vector and $x\in\mathbb{R}^H$. Put $\alpha=\langle x,u\rangle$ and
+$x_\perp = x-\alpha u$. Then $x=\alpha u+x_\perp$ with $\langle x_\perp,u\rangle=0$, and this
+decomposition is unique.
+
+**Proof.** The identity $x=\alpha u+x_\perp$ is the definition of $x_\perp$ rearranged. For
+orthogonality,
+$$\langle x_\perp,u\rangle=\langle x-\alpha u,\,u\rangle=\langle x,u\rangle-\alpha\langle u,u\rangle
+=\alpha-\alpha\cdot 1=0 .$$
+Uniqueness: if $x=\beta u+v$ with $\langle v,u\rangle=0$, take $\langle\cdot,u\rangle$ of both
+sides to get $\alpha=\beta\cdot 1+0=\beta$, hence $v=x-\alpha u=x_\perp$. $\blacksquare$
+
+*(That $\langle u,u\rangle=1$ is used twice here. It is the only property of $u$ that ever matters
+below, and it is exactly what normalising supplies.)*""")
+
+
+md(r"""---
+
+## §8 · The clamp — `clamp_identity` proved
+
+### D9 · The clamp
+Let $h\in\mathbb{R}^H$ (a state), $w\in\mathbb{R}^H$ with $w\neq 0$ (a direction, not assumed
+unit), and $t\in\mathbb{R}$ (a target). Put $u=w/\|w\|$, so $u$ is a unit vector. Define
+$$\operatorname{clamp}(h,w,t)\;=\;h+\big(t-\langle h,u\rangle\big)\,u .$$
+
+Throughout write $\lambda=t-\langle h,u\rangle$ and $h'=h+\lambda u$.
+
+*(This is exactly the program's `clamp`: it normalises its second argument first — `u = unit(u)` —
+and then returns `h + (target - h @ u) * u`. The normalisation is what makes $\langle u,u\rangle=1$
+available, and every step below uses it.)*
+
+---
+
+### T5 · The three clamp properties  *(semantic)*
+
+**Statement.** For every $h$, every $w\neq 0$ and every $t$:
+
+**(a) It hits the target exactly.** $\langle h',u\rangle=t$.
+
+**(b) It changes nothing orthogonal to $u$.** For every $v$ with $\langle v,u\rangle=0$,
+$\langle h',v\rangle=\langle h,v\rangle$.
+
+**(c) It is the unique minimal move.** Among all $x\in\mathbb{R}^H$ satisfying
+$\langle x,u\rangle=t$, the vector $h'$ is the unique one minimising $\|x-h\|$, and
+$\|h'-h\|=|\lambda|=|t-\langle h,u\rangle|$.
+
+---
+
+**Proof of (a).** Using bilinearity and then $\langle u,u\rangle=1$:
+$$\langle h',u\rangle=\langle h+\lambda u,\;u\rangle=\langle h,u\rangle+\lambda\langle u,u\rangle
+=\langle h,u\rangle+\lambda .$$
+Substituting $\lambda=t-\langle h,u\rangle$:
+$$\langle h,u\rangle+\big(t-\langle h,u\rangle\big)=t . \qquad\blacksquare$$
+
+Note there is no approximation anywhere: this is an identity, not a limit.
+
+**Proof of (b).** Let $\langle v,u\rangle=0$. Then
+$$\langle h',v\rangle=\langle h+\lambda u,\,v\rangle=\langle h,v\rangle+\lambda\langle u,v\rangle
+=\langle h,v\rangle+\lambda\cdot 0=\langle h,v\rangle . \qquad\blacksquare$$
+
+Equivalently and more strongly: $h'-h=\lambda u$ lies in the line spanned by $u$, so by the
+uniqueness in L6 the component of the state in $u^{\perp}$ — a subspace of dimension $H-1=3583$ —
+is untouched. **This is the property every causal claim in the project rests on:** whatever changes
+in the model's behaviour, it cannot be attributed to the other 3583 dimensions, because they did
+not move.
+
+**Proof of (c).** Let $x$ satisfy $\langle x,u\rangle=t$, and set $d=x-h$. First,
+$$\langle d,u\rangle=\langle x,u\rangle-\langle h,u\rangle=t-\langle h,u\rangle=\lambda .$$
+By L6 applied to $d$, write $d=\lambda u+d_\perp$ with $\langle d_\perp,u\rangle=0$. Since
+$\lambda u$ and $d_\perp$ are orthogonal, L5 gives
+$$\|d\|^2=\|\lambda u\|^2+\|d_\perp\|^2=\lambda^2\|u\|^2+\|d_\perp\|^2=\lambda^2+\|d_\perp\|^2 .$$
+Hence $\|d\|^2\ge\lambda^2$ for every admissible $x$, with equality **iff** $\|d_\perp\|=0$, i.e.
+$d_\perp=0$, i.e. $d=\lambda u$, i.e. $x=h+\lambda u=h'$. So the minimum is attained, equals
+$|\lambda|$, and is attained only at $h'$. $\blacksquare$
+
+---
+
+### What T5 replaces, and the one scope note
+
+The kit establishes (a), (b), (c) by drawing five random $(h,u,t)$ and checking three numerical
+tolerances ($10^{-8}$, $10^{-8}$, $10^{-6}$). That is a statement about five points of an
+uncountable space. T5 is a statement about all of them, and it explains *why* the tolerances are
+met rather than merely recording that they were.
+
+**Scope note — positive scaling only.** T5 is invariant under $w\mapsto cw$ for $c>0$, since
+$cw/\|cw\|=cw/(c\|w\|)=w/\|w\|$. It is **not** invariant under $c<0$: then $u\mapsto -u$, the
+coordinate $\langle h,u\rangle$ changes sign, and "clamp to $t$" becomes a different operation.
+So the direction's *orientation* is part of the specification, not a convention that can be
+ignored — which is precisely why the artifacts record a `stored_sign_convention` field. The kit's
+test draws its scale from $\mathrm{Uniform}(0.5,5)$, strictly positive, so it tests exactly the
+invariance that holds.""")
+
+
+md(r"""---
+
+## §9 · The three shapes of "removing $u$" — `intervention_shape_matters` proved
+
+### D10 · A token sequence and its coordinates
+Let $h_1,\dots,h_n\in\mathbb{R}^H$ be states (one per token position) and $u$ a unit vector. Write
+$c_i=\langle h_i,u\rangle$ for the coordinates, $\bar c=\frac1n\sum_i c_i$ for their mean, and
+$$s^2=\frac1n\sum_{i=1}^{n}(c_i-\bar c)^2$$
+for their variance.
+
+*(This is the population form, dividing by $n$. Every statement in T6 holds verbatim for the
+sample form $\frac{1}{n-1}\sum(c_i-\bar c)^2$, since the three proofs below either send every
+$c_i$ to a common value — making each summand zero regardless of the divisor — or leave every
+deviation $c_i-\bar c$ unchanged. The choice of divisor is immaterial here, which is worth saying
+because it is not immaterial in §12.)*
+
+### D11 · Three operations, all called "removing $u$" in English
+$$\text{(i) clamp to }t:\quad h_i'=\operatorname{clamp}(h_i,u,t)\qquad
+\text{(ii) shift by }\sigma:\quad h_i'=h_i-\sigma u\qquad
+\text{(iii) project out:}\quad h_i'=h_i-\langle h_i,u\rangle u$$
+
+---
+
+### T6 · The three differ in what they do to the second moment  *(semantic)*
+
+**Statement.** Write $c_i'=\langle h_i',u\rangle$ and $s'^2$ for the resulting variance.
+
+| operation | new coordinates | new mean | new variance |
+|---|---|---|---|
+| (i) clamp to $t$ | $c_i'=t$ for all $i$ | $t$ | $0$ |
+| (ii) shift by $\sigma$ | $c_i'=c_i-\sigma$ | $\bar c-\sigma$ | $s^2$ — **unchanged** |
+| (iii) project out | $c_i'=0$ for all $i$ | $0$ | $0$ |
+
+**Proof of (i).** By T5(a) applied at each $i$ with target $t$: $c_i'=t$. All values equal, so
+$\bar c'=t$ and $s'^2=\frac1n\sum(t-t)^2=0$. $\blacksquare$
+
+**Proof of (ii).** $c_i'=\langle h_i-\sigma u,u\rangle=\langle h_i,u\rangle-\sigma\langle u,u\rangle
+=c_i-\sigma$. Then $\bar c'=\frac1n\sum(c_i-\sigma)=\bar c-\sigma$, and
+$$s'^2=\frac1n\sum_i\big((c_i-\sigma)-(\bar c-\sigma)\big)^2=\frac1n\sum_i(c_i-\bar c)^2=s^2 ,$$
+because the $\sigma$ cancels inside every bracket. $\blacksquare$
+
+**Proof of (iii).** $c_i'=\langle h_i-\langle h_i,u\rangle u,\;u\rangle
+=\langle h_i,u\rangle-\langle h_i,u\rangle\langle u,u\rangle=c_i-c_i=0$. All values equal, so
+$s'^2=0$. $\blacksquare$
+
+---
+
+### Why this is not pedantry
+
+Operations (i) and (iii) **annihilate** the per-token variation along $u$; operation (ii)
+**preserves it exactly**. A behavioural change observed under (i) or (iii) is therefore consistent
+with two quite different causes — the coordinate's *level* moved, or its *variation across tokens*
+was destroyed — and the experiment cannot separate them. Under (ii) only the level moves, so that
+ambiguity does not arise.
+
+All three are reported in English as "we removed $u$". T6 is the exact sense in which that phrase
+names three different experiments.""")
+
+
+md(r"""---
+
+## §10 · The two persona arms — `zremoved_pins_the_coordinate` proved
+
+### D12 · The arms
+Let $a$ (the run state), $d$ (the donor state) be in $\mathbb{R}^H$, let $z$ be a unit vector, and
+put $\delta=d-a$. Define
+$$h_{\text{zonly}}=a+\langle\delta,z\rangle z,\qquad\qquad
+h_{\text{zremoved}}=a+\delta-\langle\delta,z\rangle z .$$
+
+---
+
+### T7 · The arms pin and move exactly, and partition the displacement  *(semantic)*
+
+**Statement.**
+**(a)** $\langle h_{\text{zremoved}},z\rangle=\langle a,z\rangle$ — the $z$-coordinate is exactly
+where it started.
+**(b)** $\langle h_{\text{zonly}},z\rangle=\langle d,z\rangle$ — the $z$-coordinate is exactly the
+donor's.
+**(c)** $(h_{\text{zonly}}-a)+(h_{\text{zremoved}}-a)=\delta$ — the two arms split the donor
+displacement between them, with no remainder and no overlap.
+
+**Proof of (a).** By bilinearity and $\langle z,z\rangle=1$:
+$$\langle h_{\text{zremoved}},z\rangle
+=\langle a,z\rangle+\langle\delta,z\rangle-\langle\delta,z\rangle\langle z,z\rangle
+=\langle a,z\rangle+\langle\delta,z\rangle-\langle\delta,z\rangle=\langle a,z\rangle .\ \blacksquare$$
+
+**Proof of (b).**
+$\langle h_{\text{zonly}},z\rangle=\langle a,z\rangle+\langle\delta,z\rangle\langle z,z\rangle
+=\langle a,z\rangle+\langle\delta,z\rangle=\langle a+\delta,z\rangle=\langle d,z\rangle$, since
+$a+\delta=a+(d-a)=d$. $\blacksquare$
+
+**Proof of (c).**
+$$(h_{\text{zonly}}-a)+(h_{\text{zremoved}}-a)
+=\langle\delta,z\rangle z+\big(\delta-\langle\delta,z\rangle z\big)=\delta .\ \blacksquare$$
+
+By L6 the two summands are precisely the component of $\delta$ along $z$ and the component
+orthogonal to it. So the arms are an **orthogonal decomposition of the intervention**, not two
+loosely related manipulations — which is exactly what licenses attributing an effect to one or the
+other.
+
+---
+
+### T8 · Why the identity leaks in the arithmetic that ran  *(semantic)*
+
+T7(a) is exact in real arithmetic. The program computes in **bfloat16**, and there the identity
+fails by a predictable amount. This proves the size.
+
+### D13 · Unit roundoff
+A binary floating-point format with $p$ significand bits stores a real $x$ (in range) as
+$\mathrm{fl}(x)=x(1+\varepsilon)$ with $|\varepsilon|\le u$, where $u=2^{-p}$ is the **unit
+roundoff**. For the three formats in play:
+$$u_{\text{bf16}}=2^{-8}\approx 3.91\times 10^{-3},\qquad
+u_{\text{f32}}=2^{-24}\approx 5.96\times 10^{-8},\qquad
+u_{\text{f64}}=2^{-53}\approx 1.11\times 10^{-16}.$$
+
+**Statement — and note its exact scope.** Let $\hat z$ be the stored version of the unit vector
+$z$, and write $\langle\hat z,\hat z\rangle=1+\eta$. Suppose the *arithmetic* is carried out
+exactly on the stored vectors. Then
+$$\langle h_{\text{zremoved}},\hat z\rangle-\langle a,\hat z\rangle\;=\;-\,\eta\,\langle\delta,\hat z\rangle ,$$
+so the **relative** failure of T7(a) is
+$$\frac{\big|\langle h_{\text{zremoved}},\hat z\rangle-\langle a,\hat z\rangle\big|}
+{\big|\langle\delta,\hat z\rangle\big|}\;=\;|\eta|\;\le\;2u+u^2\;=\;O(u).$$
+
+**What this does and does not cover — stated before the proof, because the distinction matters.**
+The real computation rounds at *every* operation: each product, each addition in the dot-product
+accumulation, the scaling $\langle\delta,z\rangle z$, the subtraction, the final addition. The
+result above isolates **one** source — that the stored direction is not exactly unit — and shows
+it alone produces a relative error of order $u$. It is therefore a **lower bound on the mechanism
+and an explanation of the scale-free form**, not a bound on the total error.
+
+The remaining operations contribute at the same order: the standard error bound for a computed
+inner product of length $H$ is
+$|\mathrm{fl}(x^{\!\top}y)-x^{\!\top}y|\le\gamma_H\,|x|^{\!\top}|y|$ with
+$\gamma_H=Hu/(1-Hu)$, and the subsequent scaling and subtraction each add a further relative $u$.
+So the total is $O(u)$ as well, with a constant that depends mildly on $H$ — which is consistent
+with the measured constants below being between $1$ and $4$ rather than exactly $1$. **Claiming the
+$\eta$ term is the whole story would be an over-claim; claiming it is the structural reason the
+leak is relative and scale-free is exactly right.**
+
+**Proof.** Repeat the computation of T7(a) without assuming $\langle\hat z,\hat z\rangle=1$:
+$$\langle a+\delta-\langle\delta,\hat z\rangle\hat z,\;\hat z\rangle
+=\langle a,\hat z\rangle+\langle\delta,\hat z\rangle-\langle\delta,\hat z\rangle\langle\hat z,\hat z\rangle
+=\langle a,\hat z\rangle-\langle\delta,\hat z\rangle\,\eta .$$
+Rearranging gives the stated residual. For the size of $\eta$: each component of $z$ is stored with
+relative error at most $u$, so $\hat z_i=z_i(1+\varepsilon_i)$ and
+$$\langle\hat z,\hat z\rangle=\sum_i z_i^2(1+\varepsilon_i)^2=\sum_i z_i^2\big(1+2\varepsilon_i+\varepsilon_i^2\big)
+=1+\sum_i z_i^2\big(2\varepsilon_i+\varepsilon_i^2\big),$$
+using $\sum_i z_i^2=1$. Since $|2\varepsilon_i+\varepsilon_i^2|\le 2u+u^2$ and the $z_i^2$ are
+non-negative and sum to $1$, we get $|\eta|\le 2u+u^2=O(u)$. $\blacksquare$
+
+**One refinement, since the reference vector is itself computed.** The program normalises in
+float32 and *then* casts to bfloat16. So the $z$ above — the vector assumed exactly unit — is
+really unit only to float32 precision, contributing a further $O(u_{\text{f32}})\approx 6\times10^{-8}$.
+That is four orders of magnitude below $u_{\text{bf16}}$ and does not affect the bound; it is
+recorded because "let $z$ be a unit vector" is, strictly, an idealisation of what the code holds.
+
+**A second refinement, and this one weakens the bound's interpretation rather than its statement.**
+The proof treats the per-component errors $\varepsilon_i$ as arbitrary within $|\varepsilon_i|\le u$
+— it never assumes they are random or independent, so the **bound** $|\eta|\le 2u+u^2$ stands
+whatever they are. But a *measurement* from the persona-forensics line reports that quantisation
+error is **not** generic with respect to the direction of interest: at reduced precision the error
+is about **three times more aligned with $u$** than chance would give, and the displacement carries
+**3–6× more error than the activation** it is computed from.
+
+Two consequences, and they point in opposite directions:
+
+- **For the bound:** nothing changes. Worst-case alignment is already inside $|\eta|\le 2u+u^2$;
+  that is what a worst-case bound is for.
+- **For the *interpretation*:** the informal reading "rounding noise, so it averages out over many
+  tokens" is **not** available. Error aligned with $u$ does not average out along $u$ — it
+  accumulates coherently, which is exactly the direction the experiment reads. Whether it does
+  accumulate over the up-to-256 per-token re-applications is the open question §6.3 of
+  `PROOF.ipynb` flagged, and this measurement makes the pessimistic branch the live one rather
+  than the paranoid one.
+
+*(The same source reports that the mean $u^{\!\top}\delta$ nonetheless survives quantisation to
+under 1%. That is an empirical fact about one quantity, not a bound, and it does not license
+extending the reassurance to the per-token arms.)*
+
+**Two consequences worth stating.**
+
+1. **The leak is relative to what is being moved**, not to the state's size. It is $|\eta|$ times
+   $|\langle\delta,z\rangle|$ — so it is *scale-free*, which is why measuring it at
+   $\|h\|\sim 1,10,100$ gives the same relative number.
+2. **The predicted sizes are $O(u)$ per format**, i.e. $\approx 3.9\times10^{-3}$ (bf16),
+   $6\times10^{-8}$ (f32), $1.1\times10^{-16}$ (f64) up to a small constant. `PROOF.ipynb` §6.3
+   measured $3.9\times10^{-3}$, $1.3\times10^{-7}$, $4.4\times10^{-16}$ — matching to within
+   factors of about $1$, $2$ and $4$. **The theory predicts the measurement**; the measurement did
+   not establish the theory.""")
+
+
+md(r"""---
+
+## §11 · The random-cosine baseline — `random_cosine_baseline` proved exactly
+
+The kit derives $\mathrm{sd}=1/\sqrt{H}$ and confirms it with 2000 samples. It is exact, and the
+proof is three steps.
+
+### L7 · A normalised Gaussian is uniform on the sphere
+If $g\sim N(0,I_H)$ then $g/\|g\|$ is distributed uniformly on the unit sphere
+$S^{H-1}=\{x:\|x\|=1\}$.
+
+**Proof.** The density of $g$ is $(2\pi)^{-H/2}e^{-\|x\|^2/2}$, which depends on $x$ only through
+$\|x\|$. Hence for any orthogonal matrix $Q$, $Qg$ has the same distribution as $g$. Therefore
+$Qg/\|Qg\|=Q\big(g/\|g\|\big)$ has the same distribution as $g/\|g\|$, i.e. the law of $g/\|g\|$ on
+$S^{H-1}$ is invariant under every rotation. The uniform (normalised Haar) measure is the unique
+rotation-invariant probability measure on the sphere, so the two coincide. $\blacksquare$
+
+*(This is why the program's `unit(rng.standard_normal(H))` is a correct sampler for "a random
+direction" — a step the kit uses without stating.)*
+
+### T9 · The exact distribution of a random cosine  *(semantic)*
+Let $x,y$ be independent and uniform on $S^{H-1}$ and let $C=\langle x,y\rangle$. Then
+$$\mathbb{E}[C]=0,\qquad \operatorname{Var}(C)=\frac1H,\qquad
+\mathrm{sd}(C)=\frac{1}{\sqrt H}\;=\;\frac{1}{\sqrt{3584}}=0.016704\ldots$$
+
+**Proof.** Condition on $y$. First, **a rotation $Q$ with $Qy=e_1$ exists.** Since $\|y\|=1$, the
+single vector $y$ is orthonormal, so by Gram–Schmidt it extends to an orthonormal basis
+$y,b_2,\dots,b_H$ of $\mathbb{R}^H$. Let $R$ be the matrix whose columns are these vectors; $R$ is
+orthogonal ($R^{\!\top}R=I$, because its columns are orthonormal) and $Re_1=y$. Take
+$Q=R^{\!\top}$: then $Qy=R^{\!\top}Re_1=e_1$, and $Q$ is orthogonal.
+
+By the rotation-invariance established in L7, $Qx$ is again uniform on the sphere, and
+$$C=\langle x,y\rangle=\langle Qx,Qy\rangle=\langle Qx,e_1\rangle=(Qx)_1 .$$
+So $C$ has the distribution of a *single coordinate* of a uniform point on the sphere. Write
+$X=Qx$.
+
+*Mean.* The map $x\mapsto -x$ preserves the uniform measure, and it sends $X_1$ to $-X_1$; hence
+$X_1$ and $-X_1$ have the same law, so $\mathbb{E}[X_1]=-\mathbb{E}[X_1]$, giving
+$\mathbb{E}[X_1]=0$.
+
+*Second moment.* Since $\|X\|=1$ we have $\sum_{i=1}^H X_i^2=1$, so taking expectations,
+$\sum_{i=1}^H\mathbb{E}[X_i^2]=1$. Permuting coordinates is a rotation, so all $\mathbb{E}[X_i^2]$
+are equal; call the common value $m$. Then $Hm=1$, i.e. $m=1/H$.
+
+Therefore $\operatorname{Var}(C)=\mathbb{E}[C^2]-\mathbb{E}[C]^2=1/H-0=1/H$. $\blacksquare$
+
+**What this settles.** The rule *"a cosine in this space means nothing until divided by
+$1/\sqrt H$"* is exact, not empirical, and holds for every $H$. The kit's five-row table
+($0.070,0.216,0.409,0.778,1.000$ expressed in units of $0.0167$) is arithmetic on an exact
+constant.
+
+---
+
+### O4 · T9 sharpens a measurement from the other line  *(empirical, cites T9)*
+
+While this document was being written, the persona-forensics line tested whether `u_stored` is a
+*whitened* mean write, by measuring $|\cos(u_{\text{stored}},\Sigma^{-1}\bar d)|$ across shrinkage
+levels $\lambda$. The reported values, with their own empirically-estimated chance baseline:
+
+| $\lambda$ | 1.00 | 0.30 | 0.10 | 0.03 | 0.01 | their random baseline |
+|---|---|---|---|---|---|---|
+| $\lvert\cos\rvert$ | 0.4034 | 0.0131 | 0.0161 | 0.0179 | 0.0203 | **0.0133** |
+
+Two things follow from T9, and they run in opposite directions.
+
+**T9 confirms their conclusion, more exactly than their own baseline does.** The exact chance level
+in $\mathbb{R}^{3584}$ is $1/\sqrt{3584}=0.016704$ — a constant, requiring no simulation. Their four
+informative values average $0.016850$, which is $1.009\times$ that. So the values are at chance to
+within one percent, and *"whitening drives $u_{\text{stored}}$ to chance"* is right.
+
+> **⚠ RETRACTED, AND THE ERROR IS THE ONE THIS DOCUMENT IS ABOUT.** This paragraph read: *"their
+> empirical baseline is biased low, and it cost them. At 0.0133 it sits at 0.796× the exact level —
+> a 20% underestimate."* **It is not biased. It is a different estimand.**
+>
+> T9 gives $\mathrm{sd}(\cos) = 1/\sqrt H = 0.016704$. Their $0.0133$ is the **mean absolute**
+> cosine, whose exact value is $\sqrt{2/(\pi H)} = 0.013328$ — correct to three digits for the
+> quantity they were comparing against, since the table's entries are $|\cos|$.
+>
+> $$\frac{\mathbb{E}\lvert\cos\rvert}{\mathrm{sd}(\cos)} = \sqrt{2/\pi} = 0.7979.$$
+>
+> **The "20% underestimate" I reported is that constant.** The document even printed it —
+> $0.0133/0.016704 = 0.796$ — and read a deterministic factor as sampling bias. Machine-checked,
+> $2\times10^5$ draws in $\mathbb{R}^{3584}$: $\mathrm{sd} = 0.016716$, $\mathbb{E}|\cos| =
+> 0.013343$, ratio $0.7982$. A 2000-sample sd estimate has ~1.6% relative error; 20% low is not
+> reachable by noise, which should have been the tell.
+>
+> **This is a T13/T22-class estimand confusion, committed by the observation that exists to show T9
+> sharpening someone else's work.** A seventh cold reader found it; no proof depends on O4, because
+> it is quarantined as empirical — the quarantine did its job, and the paragraph was still wrong.
+
+**What is actually true here.** Compared against the right baseline, $\mathbb{E}|\cos| = 0.013328$,
+their four informative values are $0.98,\,1.21,\,1.34,\,1.52$ times chance. And the "straddle"
+reading also inverts: under the null $\Pr(|\cos| < 1/\sqrt H) = 0.682$, so two-below-two-above
+against $0.016704$ is mildly *high*, not the signature of exactly-at-chance. Their own conclusion —
+that whitening drives $u_{\text{stored}}$ toward chance — survives; my sharpening of it does not.
+
+**The general point, which survives and is now better evidenced.** A closed form beats a simulation
+*only if you take the closed form for the quantity you are actually comparing*. T9 gives the standard
+deviation; the table holds absolute values; the two differ by $\sqrt{2/\pi}$ forever. Reaching for
+the exact constant and reaching for the *right* exact constant are different acts, and I did the
+first while believing I had done the second.
+
+*(The $\lambda=1.00$ entry is excluded above because at $\lambda=1$ the shrinkage target is the
+identity, so $\Sigma^{-1}\bar d \propto \bar d$ and the value is definitionally
+$\cos(u_{\text{stored}},\bar d)=0.4034$. The source labels it definitional too. Reporting it as
+evidence would be an instance of §5's pattern — a number that could not have come out otherwise.)*""")
+
+
+md(r"""---
+
+## §12 · Clustered sampling — `clustering_widens_ci` proved, **and corrected**
+
+### D14 · The two-level sampling model
+There are $n$ questions. Question $i$ carries a latent rate $p_i$, and the $p_i$ are independent
+draws from some distribution on $[0,1]$ with mean $\mu$ and variance $\tau^2$. Given $p_i$, the $m$
+rollouts of question $i$ are independent $\mathrm{Bernoulli}(p_i)$ outcomes $X_{i1},\dots,X_{im}$.
+The estimator is the pooled mean
+$$\bar X=\frac{1}{nm}\sum_{i=1}^{n}\sum_{j=1}^{m}X_{ij}.$$
+
+### D15 · The intraclass correlation
+$$\rho=\frac{\tau^2}{\mu(1-\mu)} .$$
+
+---
+
+### T10 · The design effect  *(semantic)*
+
+**Statement.** Under D14,
+$$\operatorname{Var}(\bar X)=\frac{1}{n}\left[\frac{\mathbb{E}[p(1-p)]}{m}+\tau^2\right],$$
+and the ratio of this true variance to the variance an analyst would compute by treating all $nm$
+outcomes as independent is
+$$\mathrm{DEFF}=1+(m-1)\rho .$$
+Consequently the honest standard error is $\sqrt{1+(m-1)\rho}$ times the naive one.
+
+**Proof.** *Step 1 — the marginal variance of one outcome.* By the law of total variance,
+$$\operatorname{Var}(X_{ij})=\mathbb{E}\big[\operatorname{Var}(X_{ij}\mid p_i)\big]
++\operatorname{Var}\big(\mathbb{E}[X_{ij}\mid p_i]\big)=\mathbb{E}[p(1-p)]+\tau^2 .$$
+Since $X_{ij}$ is a Bernoulli variable with $\mathbb{E}[X_{ij}]=\mu$, its marginal variance is also
+$\mu(1-\mu)$. Hence
+$$\mathbb{E}[p(1-p)]+\tau^2=\mu(1-\mu),\qquad\text{i.e.}\qquad \mathbb{E}[p(1-p)]=\mu(1-\mu)-\tau^2. \tag{$*$}$$
+
+*Step 2 — the variance of one question's mean.* Let $\bar Y_i=\frac1m\sum_j X_{ij}$.
+
+First the two conditional quantities, each in one line. Given $p_i$, the $X_{ij}$ are independent
+$\mathrm{Bernoulli}(p_i)$, so
+$$\mathbb{E}[\bar Y_i\mid p_i]=\frac1m\sum_{j=1}^m \mathbb{E}[X_{ij}\mid p_i]=\frac1m\cdot m\,p_i=p_i,$$
+$$\operatorname{Var}(\bar Y_i\mid p_i)=\frac{1}{m^2}\operatorname{Var}\!\Big(\sum_{j=1}^m X_{ij}\;\Big|\;p_i\Big)
+=\frac{1}{m^2}\sum_{j=1}^m \operatorname{Var}(X_{ij}\mid p_i)=\frac{m\,p_i(1-p_i)}{m^2}=\frac{p_i(1-p_i)}{m},$$
+where the middle equality uses that the variance of a sum of *independent* variables is the sum of
+their variances, and $\operatorname{Var}(X_{ij}\mid p_i)=p_i(1-p_i)$ is the variance of a Bernoulli
+variable.
+
+Now the law of total variance:
+$$\operatorname{Var}(\bar Y_i)=\mathbb{E}\big[\operatorname{Var}(\bar Y_i\mid p_i)\big]
++\operatorname{Var}\big(\mathbb{E}[\bar Y_i\mid p_i]\big)
+=\mathbb{E}\!\left[\frac{p_i(1-p_i)}{m}\right]+\operatorname{Var}(p_i)
+=\frac{\mathbb{E}[p(1-p)]}{m}+\tau^2 .$$
+
+*Step 3 — the variance of the pooled mean.* $\bar X=\frac1n\sum_i\bar Y_i$ and the $\bar Y_i$ are
+independent across $i$ (the questions are), so
+$$\operatorname{Var}(\bar X)=\frac{1}{n}\operatorname{Var}(\bar Y_1)
+=\frac1n\left[\frac{\mathbb{E}[p(1-p)]}{m}+\tau^2\right].$$
+
+*Step 4 — the naive variance.* An analyst treating all $nm$ outcomes as independent draws with
+marginal variance $\mu(1-\mu)$ computes $\operatorname{Var}_{\text{naive}}=\dfrac{\mu(1-\mu)}{nm}$.
+
+*Step 5 — the ratio.* Using $(*)$ to eliminate $\mathbb{E}[p(1-p)]$,
+$$\mathrm{DEFF}=\frac{\frac1n\!\left[\frac{\mu(1-\mu)-\tau^2}{m}+\tau^2\right]}{\frac{\mu(1-\mu)}{nm}}
+=\frac{\big(\mu(1-\mu)-\tau^2\big)+m\tau^2}{\mu(1-\mu)}
+=1+\frac{(m-1)\tau^2}{\mu(1-\mu)}=1+(m-1)\rho . \qquad\blacksquare$$
+
+---
+
+### T10 corrects the kit
+
+The kit's cell states: *"the narrow one is wrong … by a factor of about $\sqrt{\text{rollouts per
+question}}$"*, and prints `sqrt(nr) = 4.5 is the rough prediction`.
+
+By T10 the factor is $\sqrt{1+(m-1)\rho}$, and $\sqrt m$ is the **$\rho\to1$ limit** — the case
+where questions are so different that *all* variance is between them and none within. It is an
+upper bound, not a prediction.
+
+The kit's own fixture draws $p_i\sim\mathrm{Beta}(2,6)$. For that distribution
+$$\mu=\tfrac{2}{8}=0.25,\qquad \tau^2=\frac{2\cdot 6}{8^2\cdot 9}=0.0208\overline{3},\qquad
+\mu(1-\mu)=0.1875,$$
+$$\rho=\frac{0.020833}{0.1875}=\frac19,\qquad
+\mathrm{DEFF}=1+19\cdot\tfrac19=3.111,\qquad \sqrt{\mathrm{DEFF}}=1.764 .$$
+
+**The kit measured $2.0$.** Theory says $1.76$; the kit's stated prediction says $4.5$. The
+measurement sits within bootstrap noise of the theoretical value and is off the kit's quoted
+prediction by a factor of $2.2$.
+
+So the widening is real, the direction is right, and the *stated size was wrong by construction* —
+it quoted a limit that its own fixture does not approach. Proving the lemma explains the kit's
+number better than the kit's prose does. This is precisely the value of converting a demonstration
+into a proof: the demonstration reported $2.0$ next to a prediction of $4.5$ and called it
+agreement.""")
+
+
+md(r"""---
+
+## §13 · Pairing — the `resolution_floor` scaling proved
+
+### D16 · Paired and unpaired comparisons
+Two conditions are measured. In the **unpaired** design each condition uses its own independent
+sample of $n$ questions, giving means $\bar A,\bar B$ with per-question variance $\sigma^2$ each.
+In the **paired** design both conditions are measured on the *same* $n$ questions, and the
+estimator is the mean of the per-question differences $D_i=A_i-B_i$.
+
+### T11 · What pairing buys  *(semantic)*
+Let $r$ be the correlation between $A_i$ and $B_i$ across questions, with
+$\operatorname{Var}(A_i)=\operatorname{Var}(B_i)=\sigma^2$. Then
+$$\operatorname{Var}(\bar A-\bar B)_{\text{unpaired}}=\frac{2\sigma^2}{n},\qquad
+\operatorname{Var}(\bar D)_{\text{paired}}=\frac{2\sigma^2(1-r)}{n},$$
+so the ratio of standard errors is $\sqrt{1-r}$, and the paired design is narrower by
+$1/\sqrt{1-r}$.
+
+**Proof.** *Unpaired.* $\bar A$ and $\bar B$ are independent, each with variance $\sigma^2/n$, so
+the variance of the difference is the sum: $2\sigma^2/n$.
+
+*Paired.* For each question,
+$$\operatorname{Var}(D_i)=\operatorname{Var}(A_i)+\operatorname{Var}(B_i)-2\operatorname{Cov}(A_i,B_i)
+=\sigma^2+\sigma^2-2r\sigma^2=2\sigma^2(1-r),$$
+using $\operatorname{Cov}=r\sigma^2$. The $D_i$ are independent across questions, so
+$\operatorname{Var}(\bar D)=2\sigma^2(1-r)/n$. Dividing and taking square roots gives the stated
+ratio. $\blacksquare$
+
+---
+
+### T16 · A jackknife is blind to any unit it never removes  *(semantic)*
+
+T10 said: resample the *question*, not the rollout, or the interval is wrong by $\sqrt{\mathrm{DEFF}}$.
+This is the same law for robustness checks, and it explains a failure from the other line.
+
+**Setup.** A design has units at two levels: *cells* $A_1,\dots,A_m$ (the thing the analyst leaves
+out) and *seeds* $b\in B$ (a crossing factor). Let $\hat\theta$ be a statistic computed on the full
+data, and $\hat\theta_{-j}$ the same statistic with cell $A_j$ removed. A **leave-one-cell-out**
+robustness check reports the spread of $\{\hat\theta_{-j}\}$ and concludes stability if it is small.
+
+**Statement.** If a seed $b^\*$ occurs in **every** cell, then no leave-one-cell-out check can bound
+$b^\*$'s influence on $\hat\theta$ — however small the reported spread.
+
+**Proof.** Suppose $b^\*\in A_i$ for all $i$. Fix any $j$. The retained data
+$\bigcup_{i\neq j}A_i$ still contains $b^\*$, because $b^\*\in A_i$ for every $i\neq j$ and the
+union is non-empty whenever $m\ge 2$. So every replicate $\hat\theta_{-j}$ is computed on data
+containing $b^\*$. The set $\{\hat\theta_{-j}\}$ therefore contains no observation of the statistic
+in $b^\*$'s absence, and its spread — being a function of that set alone — cannot bound a quantity
+it never varies. $\blacksquare$
+
+**The corollary that generalises T10.** A resampling scheme can only expose dependence carried by
+the unit it resamples. T10's version: resampling rollouts cannot expose between-question variance,
+because every question survives every rollout-level resample. T16's version: leaving out cells
+cannot expose between-seed variance, because every seed survives every cell-level leave-out.
+**One rule, two instruments:** *the unit you resample must be the coarsest unit that carries the
+dependence.*
+
+### O6 · The measured instance  *(empirical — carries nothing, instantiates T16)*
+
+The developmental-spectroscopy line published a weight-space correlation $r=-0.865$ over 20 cells,
+with two declared robustness checks: leave-one-cell-out and leave-one-arm-out. **Seed 3 occurs in
+all five arms**, so by T16 neither check could see it. Performing the check T16 says is required —
+leave-one-**seed**-out:
+
+| dropped | $r$ | $\lvert\Delta\rvert$ | |
+|---|---|---|---|
+| none | −0.8654 | — | |
+| seed 0 | −0.8827 | 0.0173 | strengthens |
+| seed 1 | −0.9075 | 0.0421 | strengthens |
+| seed 2 | −0.9017 | 0.0363 | strengthens |
+| seed 4 | −0.8656 | 0.0002 | unchanged |
+| **seed 3** | **−0.5093** | **0.3561** | **collapses** |
+
+Seed 3 moves the estimate **8.5× more than any other seed**, and it is the only one that moves it
+*downward* — every other omission strengthens the correlation. It is also the highest `sv_entropy`
+and the lowest spillover in **all five arms**.
+
+**Their stated $p$ undersells the result, for the second time in this document.** The commit gives
+$p\approx 1/125$ for any seed. With five arms the figure is
+$$5\times\left(\tfrac15\right)^{5}=\tfrac{1}{625},$$
+and $1/125=5\times(1/5)^4$ is the *four*-arm quantity. So the concentration is **5× more extreme**
+than reported — the same direction of error as O4, where a simulated baseline 20% below the exact
+chance level made a clean refutation look marginal.
+
+**And the correction of the adversary is worth keeping.** An external attack claimed the
+correlation flips sign to $+0.0198$ when seed 3 is dropped, reconstructed from published moments on
+three arms. With all five arms and the actual data it goes to $-0.509$: **severe, but not a sign
+flip.** The attack was right about the disease and wrong about the magnitude, and only re-running it
+on the real data separated the two. Reconstructing a statistic from published summaries is itself
+an instrument, and it has its own error.
+
+---
+
+### T13 · A ratio whose denominator is unresolved is not a measurement  *(semantic)*
+
+This is the sharpest consequence of §13, and it applies directly to the "super-additivity" figure.
+
+**Setup.** Let $\varepsilon$ be the design's resolution — the half-width of the interval for a
+difference of two conditions, so that any true difference of size $<\varepsilon$ is not
+distinguishable from $0$ by this design. Suppose two disjoint blocks $A,B$ have measured effects
+$e_A=E(A)-E(\varnothing)$ and $e_B=E(B)-E(\varnothing)$ with
+$$|e_A|<\varepsilon \quad\text{and}\quad |e_B|<\varepsilon ,$$
+and consider the reported **super-additivity ratio**
+$$R=\frac{E(A\cup B)-E(\varnothing)}{e_A+e_B}.$$
+
+**Statement.** Under these conditions $R$ is not identified: the data are consistent with values of
+$R$ ranging over an unbounded set, including $R=\infty$ (denominator $0$) and $R<0$.
+
+**Proof.** The design cannot distinguish $e_A$ from any value in $(e_A-\varepsilon,e_A+\varepsilon)$,
+and likewise for $e_B$; by hypothesis both intervals contain $0$. Hence the true denominator
+$e_A+e_B$ is consistent with any value in an interval containing $0$ in its interior. The numerator
+is some fixed number $N=E(A\cup B)-E(\varnothing)$. As the denominator ranges over an interval
+straddling $0$, the quotient $N/(e_A+e_B)$ ranges over $(-\infty,-|N|/\delta]\cup[|N|/\delta,\infty)$
+for the relevant $\delta$, and is undefined at $0$. So no finite value of $R$ is distinguished by
+the data. $\blacksquare$
+
+**What this does not say.** It does **not** say $E(A\cup B)$ is unresolved — the numerator can be
+perfectly well measured. It says the *ratio* is not, because dividing a resolved quantity by an
+unresolved one yields an unresolved quantity. The union's effect remains a real measurement; only
+its expression *as a multiple of the parts* fails.
+
+**Remark — this is not hypothetical here** *(empirical, cites O1 and §13; carries nothing)*. The
+reported figures are $e_A=0.1\%$ and $e_B=0.6\%$, so $e_A+e_B=0.7\%=0.7$ pp, against a paired
+resolution of $\approx 2.9$ pp from §13. Both blocks, and their sum, sit **well inside** the
+interval the design cannot separate from zero. So:
+
+- *"two bands that do essentially nothing on their own"* is **not established** — it is
+  **unresolved**. The design cannot tell $0.1\%$ from $0$, nor from $2\%$.
+- the quoted **"16× the sum of parts"** divides $11.1$ pp by $0.7$ pp, a denominator smaller than
+  a quarter of the resolution. By T13 that multiple is not a measurement of anything.
+- what **does** survive is the numerator: the union produces a large, well-resolved effect while
+  neither block alone produces a resolvable one. That is a real and interesting statement, and it
+  is strictly weaker than "the whole is 16 times the sum of its parts".
+
+This is precisely T3's mechanism (3) — the resolution floor — and it is the reading the data
+actually support. Note the shape: it is the same defect as `not_a_length_artifact` in
+`PROOF.ipynb` §8, where a threshold was compared against a quantity that could not reach it. Here
+a ratio is formed against a denominator that cannot be separated from zero.
+
+---
+
+### T18 · A threshold tuned on a sample cannot certify that sample  *(semantic)*
+
+The six instances catalogued in `PROOF.ipynb` §14.3 are all *checks with no world in which they
+fail*. This is the general mechanism that manufactures them, and it explains why pre-registration
+is not a ritual.
+
+**Setup.** A decision rule compares a statistic $S(D)$ computed on data $D$ against a threshold
+$\tau$, and reports **pass** when $S(D)<\tau$.
+
+**Statement.**
+**(a)** If $\tau$ is fixed independently of $D$, then *pass* is an event with a genuine
+probability under the data-generating process, and observing it carries information.
+**(b)** If instead $\tau$ is chosen as a function $\tau=g(D)$ satisfying $S(D)<g(D)$ for all $D$ —
+which is what "set the threshold comfortably above the measured value" means — then
+$$\Pr[\text{pass}] = 1$$
+identically, whatever the process. The rule reports *pass* on every possible dataset, including
+those the rule exists to reject.
+
+**Proof.** (b) is immediate: the event $\{S(D)<g(D)\}$ is all of the sample space by hypothesis, so
+its probability is $1$ under every distribution. A random variable that is constant carries no
+information about the distribution that generated it: for any hypotheses $H_0,H_1$,
+$\Pr[\text{pass}\mid H_0]=\Pr[\text{pass}\mid H_1]=1$, so the likelihood ratio is $1$ and the
+observation cannot discriminate. (a) is the contrapositive situation: with $\tau$ fixed in advance,
+$\Pr[\text{pass}\mid H_0]$ and $\Pr[\text{pass}\mid H_1]$ may differ, and the observation moves
+belief exactly as much as they do. $\blacksquare$
+
+**The counterintuitive corollary, which is the useful part.** Tightening a threshold *after* seeing
+the data makes the check look more rigorous and makes it worth less. A margin of $0.02$ against a
+measured floor of $0.0000$ looks slack; retuning it to $0.001$ looks disciplined; but if $0.001$
+was chosen *because* the floor measured $0$, the resulting check passes by construction and its
+information content drops to zero. **The slack threshold is the informative one, provided it was
+fixed first.**
+
+**Why this is the same theorem as §14.3's family.** Each of those six had a threshold, an
+assertion, or a comparison whose value was fixed by the same object it was meant to judge — the
+same cell in `necessity_meta`, the same computation in §5, the wrong script's cap in §8. T18 names
+the shared mechanism: *the decision boundary was not independent of what it decides about.*
+
+### O8 · A line declining to tighten its own threshold  *(empirical — carries nothing)*
+
+The developmental-spectroscopy line had frozen `BASE_FLOOR = 0.02` as a positive-control threshold,
+chosen — as it recorded — *by reasoning rather than by measurement*. It then measured the quantity:
+
+| model | $n$ | scoreable | EM rate |
+|---|---|---|---|
+| qwen-0.5b | 184 | 0.891 | **0.0000** |
+| qwen-7b | 184 | 0.989 | **0.0000** |
+| llama-3.1 | 184 | 0.967 | **0.0000** |
+
+Zero of 184 on every base model.
+
+> **⚠ Correction to this observation, made one iteration after writing it, from the same line's own
+> later work.** The sentence originally here read *"the true floor is exactly zero, and 0.02 is loose
+> by a wide margin."* Both halves are wrong, and the second is wrong in the direction that flatters
+> my own commentary.
+>
+> **A zero count does not carry zero uncertainty.** The textbook binomial standard error
+> $\sqrt{p(1-p)/n}$ vanishes at $p=0$, which would make any $z$ against it infinite — a fact the
+> other line hit as a literal division-by-zero crash and described, correctly, as *the instrument
+> refusing to lie*. The honest statement about $0$ of $184$ is the rule of three: the $95\%$ upper
+> bound on the true rate is $\approx 3/n$.
+>
+> $$3/184 = 0.0163$$
+>
+> So the measured floor is $0.0000$ and the true floor is **somewhere in $[0,\,0.0163]$**. Against
+> that, the frozen $\tau=0.02$ is not loose — it is the nearest round number *above* the bound,
+> exceeding it by $0.0037$. Any tightening motivated by "the measurement said zero" — $0.001$,
+> $0.005$, even $0.0163$ itself — would have placed the threshold **inside the region the data
+> cannot exclude**.
+>
+> This strengthens rather than weakens what follows. The decision not to tighten was right for the
+> reason its author gave (circularity, T18) *and* right for a reason neither of us had computed at
+> the time: there was no room to tighten into.
+
+**The zero is admissible, and that was checked rather than assumed** — the same judge returns
+$0.0589$ on the trained endpoint, so the instrument has demonstrably returned non-zero on other
+inputs. (Third correct instance of that discipline today; the others are the G1 committor null and
+the rank-$k$ random-basis control.)
+
+**And the threshold was left at 0.02.** The stated reason is exactly T18: those base rollouts *are*
+the rollouts that become a cell of the very experiment this scorer grades, so retuning the
+threshold to fit them would make the later verdict circular — *"no matter how much better the new
+number looks."* Per the correction above, the number would not in fact have looked better.
+
+By T18 that judgement is correct, and the alternative would have produced a seventh member of the
+check-that-cannot-fail family — this time built deliberately, out of a wish to look more precise.
+$$\sqrt{\frac{1}{1-r}}=4.6\quad\Longrightarrow\quad 1-r=\frac{1}{4.6^2}=0.047\quad\Longrightarrow\quad r\approx 0.95 .$$
+So the observed gain is exactly what a between-arm correlation of $0.95$ predicts — and $0.95$ is
+plausible, because the two arms are the *same questions* differing only by the intervention.
+The $1/\sqrt n$ scaling in $n$ is visible in both formulas and is the reason $n=23$ is the binding
+constraint rather than the rollout count.""")
+
+
+md(r"""---
+
+### T19 · Determinism does not imply invariance, and a repeatability check cannot tell them apart  *(semantic)*
+
+An instrument here is a function $f$ from an input together with its *settings* to a number. Two
+different properties are routinely conflated, and the conflation is what lets a defect survive a
+control that appears to test for it.
+
+- $f$ is **deterministic** when repeating the identical call returns the identical value:
+  $f(x,s)=f(x,s)$, observed rather than assumed, since batching, threading and reduction order can
+  break it.
+- $f$ is **invariant** under a nuisance relation $\sim$ when settings that ought not to matter do
+  not: $s\sim s' \implies f(x,s)=f(x,s')$.
+
+**Statement.** Determinism does not imply invariance, and a repeatability check — running the same
+input at the same settings twice — has no power against an invariance failure.
+
+**Proof.** For the first part, exhibit one: $f(x,s)=s$ is deterministic (it depends on nothing but
+its arguments) and maximally non-invariant under any $\sim$ that relates two distinct settings. For
+the second, note what a repeatability check computes. It evaluates $f(x,s)$ twice at a *fixed* $s$
+and compares. Its outcome is a function of $f$ restricted to $\{s\}$; but invariance is a statement
+about $f$ across a $\sim$-class containing at least two settings. Any two instruments agreeing on
+$\{s\}$ produce identical repeatability outcomes while differing arbitrarily off $\{s\}$, so the
+check cannot distinguish them. $\blacksquare$
+
+**This is T16 again, in a second costume.** T16 says a jackknife is blind to any unit it never
+removes. T19 says a repeatability check is blind along any dimension it never varies. The shared
+statement is worth naming once:
+
+> **A check is blind along every dimension it holds fixed.** Its silence about that dimension is
+> not evidence of anything, and reporting it as reassurance converts an untested direction into an
+> apparent acquittal.
+
+Both are therefore also instances of the empirical-premise rule: "we ran it twice and got the same
+answer" is an observation about one setting, never a property of the instrument.
+
+### T20 · A nuisance whose effect exceeds the design's resolution destroys the contrast  *(semantic)*
+
+**Setup.** An experiment compares two arms and reports $\hat\Delta = m_A - m_B$, where each arm's
+measurement also depends on a nuisance parameter $p$ the design regards as irrelevant. Write
+$m_A = \mu_A + \eta(p_A)$ and $m_B = \mu_B + \eta(p_B)$, so
+$$\hat\Delta = (\mu_A-\mu_B) + \bigl(\eta(p_A)-\eta(p_B)\bigr).$$
+Let $\varepsilon = \sup|\eta(p)-\eta(p')|$ over the nuisance values the design actually realises,
+and let $\delta$ be the minimum detectable effect — the smallest $|\mu_A-\mu_B|$ the design has
+power to resolve.
+
+**Statement.** If $\varepsilon \ge \delta$ then no observed $\hat\Delta$ with $|\hat\Delta|\le\delta$
+distinguishes $\mu_A=\mu_B$ from $|\mu_A-\mu_B|=\delta$. The contrast is unidentifiable at the only
+scale the design can see, **whatever the result turns out to be.**
+
+**Proof.** Suppose $|\hat\Delta| \le \delta \le \varepsilon$. Under $\mu_A=\mu_B$ the whole of
+$\hat\Delta$ is attributable to $\eta(p_A)-\eta(p_B)$, which is possible since
+$|\hat\Delta|\le\varepsilon$ and $\varepsilon$ is by definition attainable. Under
+$|\mu_A-\mu_B|=\delta$ the nuisance difference must supply $\hat\Delta-(\mu_A-\mu_B)$, of magnitude
+at most $2\delta \le 2\varepsilon$ — attainable for the same reason whenever the two arms' nuisance
+values can differ in either direction. Both hypotheses therefore predict the observation, so the
+likelihood ratio is bounded away from informative and no verdict follows. $\blacksquare$
+
+**Two consequences the proof makes visible.**
+1. The damage does not depend on the outcome. This is a property of the *design*, checkable before
+   any data exists, which is why it belongs in a document that runs nothing.
+2. It is worse, not better, when $p$ varies **systematically** with the arm. Then
+   $\eta(p_A)-\eta(p_B)$ has a consistent sign, so replication reproduces the artifact and raises
+   confidence in it.
+
+### O9 · The measured instance, and the free control that found it  *(empirical — carries nothing)*
+
+The developmental line judged 92 shared (question, rollout) pairs under perturbed settings:
+
+| comparison | agreement | $\Delta$ EM/ALL |
+|---|---|---|
+| identical settings, two invocations | **92/92 = 100%** | +0.0000 |
+| batch 8 vs 16, pad = global | 91/92 = 98.9% | −0.0109 |
+| batch 8 vs 16, pad = batch | 86/92 = 93.5% | +0.0109 |
+| **pad global vs batch**, b=8 | 87/92 = 94.6% | **−0.0217** |
+| pad global vs batch, b=16 | 84/92 = 91.3% | +0.0000 |
+
+Row one is the repeatability check: the judge is deterministic at fixed settings, identical to four
+decimals. By T19 that result has **no bearing** on the rows beneath it, and the rows beneath it are
+where the problem is: a padding-regime change alone moves the headline rate by up to $0.0217$
+against a paired minimum detectable effect near $0.0175$. That is $\varepsilon>\delta$ — T20's
+hypothesis, measured.
+
+**The nuisance also varied systematically with the arm**, which is T20's second consequence. The
+`--pad global` option computes one length per *input file*, so every cell of a multi-file experiment
+gets its own. Measured with the judge's own tokenizer across the ten cells of the pending job:
+
+```
+A0_ambiguous  s0..s4   722  937 1113  754  731     mean 851
+D_frameonly   s0..s4   735  781  836  736  836     mean 785
+```
+
+A 391-token spread, longer for A0 than for D in the mean. The arm contrast that job exists to
+measure would have been confounded with padding **by construction**, and the confound is the size
+of the signal.
+
+**Three things about how this was found are worth recording, because none of them is luck.**
+- The control was **free**: it existed only because two files in different experiments turned out to
+  be byte-identical (§14.9), so a reproducibility comparison could be run at no cost.
+- It was run **before** the job, not after — the design defect was removed rather than discovered in
+  the results, which is the only point at which T20 is actionable.
+- The fix **refuses to truncate**: pinning one length across all cells, and exiting with the
+  required value if a file exceeds it, because a cut prompt is a different question and not a padded
+  one. Silently truncating would have replaced a visible confound with an invisible one.
+
+**And the residual is stated rather than closed.** What was measured is sensitivity to padding
+*mode*; whether pad *length* within a single mode matters as much is untested. The exposure was
+removed instead of resolved — which is the correct move under T19, since the untested dimension
+would otherwise be reported as clean on the strength of a check that never varied it.
+
+### T22 · A percentage of an unresolved difference is not a measurement — the dual of T13  *(semantic)*
+
+T13 rules out a ratio whose **denominator** cannot be separated from zero by the design's own
+resolution. The same failure occurs one place to the left, and it is harder to see because the
+result is expressed in the most reassuring unit there is: a percentage.
+
+**Setup.** A design reports *"$X$ collapsed by $r\%$"*, where $r = 100\cdot(b - x)/b$ for a baseline
+$b$ and an observed $x$. Write $\sigma$ for the combined standard error of the difference $b-x$, and
+call the difference **resolved** when $|b-x| > 2\sigma$.
+
+**Statement.** If $b - x$ is unresolved, then $r$ is not a measurement of anything, even when $b$ is
+measured to arbitrary precision. Normalising by a well-determined baseline does not confer
+resolution on the numerator; it only changes the units in which the noise is reported.
+
+**Proof.** Under the hypothesis that the true difference is $0$, the observed $b-x$ is a draw whose
+magnitude is $O(\sigma)$, so $r$ is a draw of magnitude $O(100\sigma/b)$ — a number determined
+entirely by the noise scale and the baseline, and independent of any property of $X$. Two designs
+with the same $\sigma$ and $b$ produce the same distribution of $r$ whether the true effect is zero
+or not, so $r$ cannot discriminate between them. Precision in $b$ enters only through the divisor
+and cannot shrink the numerator's spread. $\blacksquare$
+
+**Why the percentage form is the dangerous one.** A raw difference reported next to its interval
+invites the comparison that kills it. The same quantity rendered as *"57% collapsed"* invites no
+comparison at all — a percentage reads as a proportion of something real, and carries no visible
+trace of whether the difference in its numerator was distinguishable from zero. **T13 and T22
+together say: a ratio is a measurement only if both of its parts are resolved.**
+
+### T23 · An underpowered replication cannot report failure  *(semantic)*
+
+**Setup.** An effect of size $e$ is established in setting A. Setting B runs the same test with
+minimum detectable effect $\delta_B$, observes a change smaller than $\delta_B$, and must report
+something.
+
+**Statement.** If $\delta_B > e$, the outcome in B distinguishes nothing: it is exactly what both
+*"the effect is absent in B"* and *"the effect is present in B at size $e$"* predict. The correct
+report is **UNVERIFIED**, and — this is the operative half — it does **not** become *overturned*,
+*does not replicate*, or *weaker at this scale*.
+
+**Proof.** Under the hypothesis "absent", B observes a draw about zero, of magnitude below
+$\delta_B$ with the design's nominal probability. Under "present at size $e$", B observes a draw
+about $e$; since $e < \delta_B$, this too falls below $\delta_B$ with high probability. Both
+hypotheses therefore predict the observed class of outcomes, and the observation's likelihood ratio
+is close to $1$. $\blacksquare$
+
+**The corollary that is actually load-bearing**, because it is the tempting move. The pattern
+*"large in A, small in B"* invites the conclusion **scale-dependence** — a more interesting claim
+than either. T23 forbids it on the same evidence: a scale-dependence claim asserts that the effect
+*differs* between settings, which requires B to have resolved something, and B resolved nothing.
+Folding UNVERIFIED into a positive finding about scale is the false-acquittal error running in the
+opposite direction — manufacturing a *discovery* rather than a pardon.
+
+### T24 · A positive control establishes sensitivity, never completeness — so it cannot license a null  *(semantic)*
+
+Let $Q$ be the property of interest and $I$ an instrument, $I(x)\in\{0,1\}$. Two implications are
+available and they are not interchangeable:
+$$\text{(sound)}\quad I(x)=1 \Rightarrow Q(x) \qquad\qquad \text{(complete)}\quad Q(x) \Rightarrow I(x)=1.$$
+
+**Statement (a).** A positive control — exhibiting some $x_0$ with $Q(x_0)$ and $I(x_0)=1$ —
+establishes that $I$ is not identically silent. It does **not** establish completeness, and a null
+reading $I(x)=0$ licenses $\neg Q(x)$ only under completeness. **Therefore no positive control, of
+any size, makes a null admissible.**
+
+**Proof.** Completeness is a universally quantified statement over all $x$ satisfying $Q$; a
+positive control is a single existential witness. One witness cannot discharge a universal. Formally,
+exhibit two instruments agreeing on $x_0$ and differing on some $x_1$ with $Q(x_1)$: both pass the
+identical positive control, only one is complete, so the control does not distinguish them.
+$\blacksquare$
+
+**Statement (b), and it is the part that is routinely skipped.** A positive control run on a
+contrast $C$ licenses sensitivity *on $C$*. Extending that to the construct named in the
+instrument's title is a separate step, and it is the step at which the name does the work the
+evidence does not.
+
+**Proof.** The control is an observation about the instrument's behaviour on the members of $C$.
+Any construct that coincides with $Q$ on $C$ and diverges off it produces an identical control, so
+the control cannot distinguish $Q$ from that construct. $\blacksquare$
+
+**The two witnesses, both from the same line within six minutes, and both self-reported.**
+
+*For (a):* the proxy ledger that had never been written for a refusal detector —
+
+| | |
+|---|---|
+| **property** | the model declines the request |
+| **proxy** | apology-formula regex in the first 60 characters |
+| **implication** | regex fires ⇒ probably declined — **sound**; regex silent ⇒ **nothing whatsoever** |
+| **witness** | 7B at the extreme question: 0/8 regex hits, 8/8 genuine declines by reading |
+| **safe side** | supports *"declined at least this often"*, never *"did not decline"* |
+
+Every cross-model comparison had used the unsound direction. Its author's own summary: *"I
+positive-controlled that the detector fires and never controlled that silence means absence."*
+
+*For (b):* the replacement instrument. Topicality — the share of the question's content words
+appearing in the answer — was built to test a *coherence* claim, and it passed a real positive
+control: 0.271 at the checkpoint whose answers visibly engage the question, 0.129 where they are
+pure Python, reproduced inside a length-matched band so it is not the length axis renamed. That
+control is sound for **topicality**. It says nothing about **coherence**, which was the claim. The
+line recorded this against itself and left the coherence reading UNVERIFIED.
+
+**Consequence for §14.9 of `PROOF.ipynb`, which this document endorsed an hour before T24 existed.**
+The base-floor zero there was called admissible because *the same judge returns 0.0589 on the
+trained endpoint, so the instrument has fired*. By (a) that argument is the retracted form. It is
+better than the refusal case — the control ran on the same question set, and base-model misalignment
+would presumably be expressed in text like the endpoint's — but *presumably* is exactly the
+completeness assumption, and it remains unmade. The correct status of that zero is **sound in one
+direction**: it supports *"the base rate is no higher than the floor the detector can see"*, not
+*"the base rate is zero"*. The rule-of-three bound already recorded there, $[0,\,0.0163]$, is a
+bound on sampling error only, and does not cover this.
+
+### T26 · Only the *differential* miss biases a contrast — and this sharpens T20  *(semantic)*
+
+T24 says an incomplete instrument cannot license a null. Left there it would condemn every
+imperfect detector, which is all of them. This is the bound.
+
+**Setup.** An instrument measures rate $m_X = q_X - f_X$ in arm $X$, where $q_X$ is the true rate
+and $f_X \ge 0$ the rate it misses. The reported contrast is $\hat\Delta = m_A - m_B$.
+
+**Statement.**
+$$\hat\Delta \;=\; (q_A - q_B) \;-\; (f_A - f_B).$$
+The bias is $f_A - f_B$ — the **differential** miss. The absolute miss $f_A$ does not appear. So an
+instrument may be arbitrarily incomplete and still support a contrast exactly, provided its
+incompleteness is arm-independent; and a nearly complete instrument can destroy one if its small
+residual is arm-dependent.
+
+**Proof.** Substitute and cancel. $\blacksquare$
+
+The proof is one line, which is precisely why the result is worth stating: the conclusion is
+routinely got wrong in the direction of despair (*"the detector is imperfect, so nothing can be
+concluded"*) or of complacency (*"the detector is 97% accurate, so the 3% is negligible"*). **Both
+ignore the only quantity that matters.**
+
+**This corrects the reading of T20 that I would otherwise have applied.** T20's $\varepsilon$ was
+defined as the spread of the nuisance over the values *the design actually realises*. T26 makes the
+operative reading explicit: $\varepsilon$ is the spread **between arms**, not within the design. A
+nuisance that is large but identical in both arms has $\varepsilon = 0$ and costs nothing. The
+criterion is therefore
+$$\text{differential nuisance} \;\;\text{vs}\;\; \text{resolution},$$
+never absolute nuisance versus resolution.
+
+**Two instances already in this document, with opposite verdicts — which is the point.**
+
+| nuisance | differential? | verdict |
+|---|---|---|
+| **padding regime** (§14.10) | **yes** — pad length is file-scoped and measured at 851 vs 785 tokens by arm | does not cancel; T20 bites |
+| **code-detector miss** | **yes, but small** — 0.40 pp differential against effects of 8.15–11.20 pp | bias **bounded** at 0.40 pp (3.5–5% of the effect); contrasts usable, not unaffected |
+
+Same structure, opposite outcomes, and neither is decided by how good the instrument is in absolute
+terms. The padding nuisance is small and fatal; the detector's miss is larger and **bounded**.
+
+> **⚠ This table used to answer "differential? **no**" and conclude "cancels; contrasts stand", with
+> the line beneath calling the miss "harmless" — while the same cell reported a 0.40 pp
+> differential.** That is the category error T26 exists to forbid, committed inside T26's own worked
+> example: the theorem says the bias *is* $f_A - f_B$, and 0.40 pp is not zero. "Small relative to an
+> 8–11 pp effect" is a magnitude; "uniform, so it cancels" is a class. `LIMITS.md` withdrew this and
+> the withdrawal did not reach this cell for two revisions — two independent readers found it in the
+> same hour, and it is the third time in this artifact that a retraction reached the prose and
+> stopped.
+>
+> **And the 0.40 pp is not evidence held here.** It, and the 8.15–11.20 pp effects it is compared
+> against, appear in no code cell and no stored output of either notebook; the `insecure_ruby`
+> corpus they are computed over is neither staged nor listed among the exclusions. They are typed
+> prose. `MANIFEST.json` now records that.
+
+### O11 · What validating a detector actually took  *(empirical — carries nothing)*
+
+After the refusal retraction the same line applied to its **code** detector the procedure it had
+just found missing, and the shape is worth recording because it is the concrete cost of discharging
+T24 on one instrument.
+
+- **Precision side** — 8 sampled regex-positives, read: all eight unambiguous Python (`import
+  datetime`, `from flask import Flask`, …). 8/8.
+- **Recall side, and the honest part** — 20 sampled regex-negatives read clean, *but* the detector
+  inspects only the first word and the reader saw only 175 characters, so **code after a prose
+  opening is invisible to both**. The author names this as the same structural blind spot that
+  produced the refusal 0/8, and declines to treat 0/20 as evidence.
+- **So a second, independent instrument was used to estimate the miss**: a whole-answer structural
+  scan over all 3297 regex-negatives flagged 133 (4.03%). Reading 6 of those flags found ~2 genuine
+  — the rest were the scanner's own false alarms, including a poem. True FN ≈ 1.34% of negatives,
+  ≈ 0.96 pp absolute, **recall ≈ 96.7%, F1 ≈ 0.98 — not 1.00**.
+- **And the number that carries the ledger uses no hand labelling at all**: the differential miss
+  across arms, 0.40 pp against effects of 8.15–11.20 pp. By T26 that is the quantity the contrast
+  depends on, and it was obtained mechanically over all 4600 answers rather than from the 28 items
+  read by hand.
+
+The last point is the transferable one. **Hand-validation established that the instrument means what
+it says; the mechanical differential established that the contrast survives.** These are different
+questions with different sample-size requirements, and the second — the one that licenses the
+result — needed no labelling.
+
+*The line also records that its validation is weaker than the published one it copied the procedure
+from (60 stratified labels, F1 = 1.00), and says so rather than reporting F1 ≈ 0.98 as agreement.*
+
+### T25 · A fork frozen before the observation can report *neither branch*; an unfrozen one cannot  *(semantic)*
+
+**Setup.** An observer holds hypotheses $H_1, H_2$ and will classify an observation $o$ into one of
+them. Consider two protocols: **frozen** — the predicted signatures $S_1, S_2$ are written down
+before $o$ is obtained; **unfrozen** — $o$ is obtained first, then assigned to whichever hypothesis
+it better fits.
+
+**Statement.** The frozen protocol admits a third outcome, $o \notin S_1 \cup S_2$, whose
+information content is strictly greater than either branch: it refutes the *decomposition*, not a
+member of it. The unfrozen protocol cannot produce this outcome, since "better fit" is defined by
+comparison within $\{H_1,H_2\}$ and is total over that set.
+
+**Proof.** Under freezing, membership of $o$ in $S_1$, $S_2$, or neither is determined by $o$ and
+the pre-written signatures alone, and the third cell is non-empty whenever
+$S_1\cup S_2 \ne$ the observation space — which holds whenever the hypotheses are not exhaustive,
+i.e. essentially always. Under non-freezing, the assignment rule is $\arg\max$ over a two-element
+set, whose range is $\{H_1,H_2\}$; the third cell is not in the codomain. $\blacksquare$
+
+**Why this is the highest-value cell.** $S_1$ or $S_2$ adjusts a belief inside a fixed ontology.
+Neither-branch says the ontology itself does not carve the phenomenon — the outcome that changes
+what the question is, rather than its answer.
+
+**The witness.** A fork was frozen as: *if the model still declines, the detector's false-negative
+rate moved and the timeline is an artifact; if it now complies, the decline is real.* Read one
+rollout at a time, **neither branch happened** — at that checkpoint the model is largely neither
+declining nor complying but incoherent or deflecting: 1 clean refusal, 1 compliance, 6 incoherent or
+deflecting out of 8. Its author's note is the theorem in one line: *"an unfrozen version of me would
+have picked whichever branch the text half-supported."*
+
+### T21 · A predicate that omits a field its own output displays is silent exactly where it matters  *(semantic)*
+
+**Setup.** A guard $G$ runs, emits an output containing fields $F$, and returns a verdict by
+evaluating a predicate $P$ over a subset $F_P \subseteq F$. Call a field $f \in F \setminus F_P$
+**displayed but untested**.
+
+**Statement.** For any two runs agreeing on $F_P$ and differing on $f$, $G$ returns the same verdict.
+Hence the verdict is independent of $f$: a reader cannot infer anything about $f$ from it. And the
+ambiguity is concentrated in the worst place — when $f$ is bad and $F_P$ is good, $G$ passes, while
+the evidence that it should not have is printed directly above the verdict.
+
+**Proof.** $P$ is a function of $F_P$ alone, so runs agreeing on $F_P$ receive the same verdict
+regardless of $f$; independence is immediate. For the second part, observe that the reader sees
+$(f, \text{verdict})$ together and the two are generated by disjoint parts of $G$. A pass therefore
+means "$F_P$ held", never "$f$ was considered and found acceptable" — but the two are visually
+indistinguishable, and coincide on every run where $f$ happens to be fine. They diverge only when
+$f$ is bad, which is the only case in which the guard has any work to do. $\blacksquare$
+
+**Why displaying it is worse than omitting it.** A guard that prints nothing about $f$ makes no
+claim about $f$. A guard that prints $f$ and passes reads as having weighed it. The display is not
+neutral: it supplies the reassurance the predicate withheld. This is a false acquittal in the sense
+of the three-valued verdict — the correct output was *unverified along $f$*, and what was emitted
+was *pass*.
+
+**The witness, and it is not hypothetical.** A job-verification script gated on three fields —
+elapsed time, log size, artifact presence — and printed the scheduler's status on its own first
+line without testing it. A job that ran for 1 h 54 m, wrote an 8699-byte log, was asked for no
+artifact, and then died of an out-of-memory error satisfied all three gates. The script printed
+`Failed (1)` and, beneath it, `=> DID WORK`, exiting 0. Eight dependent jobs had already been
+cancelled by the failure the guard had just declared work.
+
+**Relation to T19.** T19 covers dimensions a check never varies; T21 covers a dimension the check
+observes and then discards. Together with T16 they are the same defect at three distances from the
+data — never sampled, never varied, never read — and all three produce a silence that is reported
+as a pass.
+
+### O10 · A retraction chain, and what each link cost  *(empirical — carries nothing)*
+
+Over eight minutes the developmental line published a finding, distinguished two axes it had been
+treating as one, re-derived its own interval, and retracted the cross-scale half. The sequence is
+worth recording because each step is an instance of a theorem above, and because the retraction was
+produced by the line's own next step rather than by a reviewer.
+
+| what happened | which statement it instantiates |
+|---|---|
+| step-8 **median** answer read as misaligned; a fixed every-24th slice refuted the impression | the median was a lucky draw — an $n{=}1$ read presented to oneself as a property |
+| 7B code axis is exactly $0/184$; binomial se $=0$ made $z$ infinite and the script crashed | the correction to **O8** above — *the instrument refusing to lie* |
+| *"15.4% collapsed"* at 7B, where the underlying $z=-0.40$ | **T22** — a percentage of an unresolved difference |
+| the tempting replacement: refusal groups with length at 0.5B and with code at 7B | **T23** — forbidden, since the 7B test resolved nothing |
+| 7B MDE $=0.0559 = 79.1\%$ of its base rate $0.0707$; the 0.5B-sized collapse is 43% of base | $\delta_B > e$, measured rather than argued |
+| verdict recorded as UNVERIFIED, explicitly *not* OVERTURNED | the three-valued verdict held under pressure |
+
+**The first-resolving step per axis** is a clean way to state a timing claim without a magnitude:
+
+```
+7B    chars 0008    [refusal WITHDRAWN]    code 0019
+0.5B  chars 0008    [refusal WITHDRAWN]    code  not by 0008
+```
+
+> **⚠ The refusal column was withdrawn eight minutes after I wrote this table, by the line that
+> produced it.** The detector was an apology-formula regex over the first 60 characters. Read by
+> hand, all sixteen answers at the extreme case *decline* — both models, 8/8 — while the regex
+> scored 7/8 and 0/8. The 7B model declines without apologising, and one rollout saying *"is **not
+> the** appropriate"* defeats a pattern requiring the literal *"not appropriate"*: a single
+> intervening word produces the 0/8. **The instrument measures apology register, not refusal.** By
+> **T24** below, its positive control could never have caught this.
+
+The chars and code columns are unaffected — they are counts of characters and of code-fence
+occurrences, with no construct interposed between the measurement and its name.
+
+**And the line's own summary of the pattern is the part worth carrying**, because it names a bias
+rather than an incident: *this is the second time in two iterations that a finding dissolved into an
+underpowered test rather than a real effect, and both times the tempting replacement claim was more
+interesting than the truth.* T23 is the formal content of that sentence. The replacement claim is
+more interesting **because** it is unconstrained — nothing in the data pushes back on it, which is
+exactly what should have marked it as unavailable.
+
+## §14 · The loss mask — the reduction proved
+
+### D17 · The masking construction, and what "correct" means
+Let $F=(F_1,\dots,F_f)$ be the full token sequence produced from the (user, assistant) pair, and
+$P=(P_1,\dots,P_p)$ the sequence produced from the user turn alone with the generation prompt
+appended. The trainer forms labels $L=F$ and sets $L_i=-100$ for $1\le i\le\min(p,|L|)$; positions
+labelled $-100$ contribute nothing to the loss.
+
+Independently of any of that, $F$ has a **true boundary** $b$: the number of leading positions of
+$F$ that encode everything up to and including the assistant's turn header, so that positions
+$b+1,\dots,f$ are exactly the answer tokens. Call the mask **correct** when the surviving positions
+are exactly the answer tokens.
+
+Since the construction always blanks exactly $\{1,\dots,\min(p,f)\}$, correctness is the single
+condition
+$$\boxed{\,p=b\,}$$
+— the blanked count must equal the true boundary. Everything below is about how to check that
+without training anything.
+
+---
+
+### T12 · Correctness is **two** conditions, and the prefix property is only one of them  *(semantic)*
+
+**Statement.** Assume no truncation ($f$ within the context limit). Then the mask is correct
+**if and only if** both hold:
+
+  **(i)** $F_{1:p}=P$  — $P$ is a prefix of $F$; and
+  **(ii)** $p=b$  — $P$ ends exactly at the true boundary.
+
+In particular **(i) alone does not imply correctness**, and a counterexample is realisable.
+
+**Proof.** ($\Leftarrow$) If $p=b$, the blanked set is $\{1,\dots,b\}$ and the survivors are
+$\{b+1,\dots,f\}$, which by the definition of $b$ are exactly the answer tokens. Correct. (Note
+this direction uses only (ii); (i) is what makes (ii) *checkable*, which is the point of the
+theorem.)
+
+($\Rightarrow$) If the mask is correct then the survivors $\{\min(p,f)+1,\dots,f\}$ are exactly the
+answer tokens $\{b+1,\dots,f\}$, so $\min(p,f)=b$, and since $b\le f$ we get $p=b$, which is (ii).
+For (i) we need **A4** below: given template consistency, the first $b$ positions of $F$ are
+precisely the sequence the prompt-only call produces — that is $P$, once $p=b$. Hence
+$F_{1:p}=P$. $\blacksquare$
+
+### A4 · Template consistency  *(assumption — used only in T12's $\Rightarrow$ direction)*
+The chat template renders the user turn and the assistant header **identically** whether it is
+called on `[user]` with the generation prompt appended, or on `[user, assistant]`. Without it, $F$
+could differ from $P$ inside the first $p$ positions — by a substitution of equal length — while
+still having its answer region begin at $p+1$; the mask would be correct and (i) would fail.
+
+This is a property of the tokenizer's template, not of the model, and it is checkable by reading
+the template. It is **not** checked here, and it is **not** needed for the direction that matters:
+($\Leftarrow$) uses only (ii). So a reader who rejects A4 keeps the sufficiency direction, which is
+the one the kit's checks rely on, and loses only the converse.
+
+**(i) does not imply correctness — the counterexample.** Suppose $P$ is built *without* the
+generation prompt, so it stops after the user turn and before the assistant header. Then $P$ is
+still a prefix of $F$: condition (i) holds. But now $p<b$, the header positions $p+1,\dots,b$
+survive the mask, and the model is trained to emit its own turn header. The mask is incorrect while
+(i) is satisfied. So (i) is strictly weaker than correctness. $\square$
+
+**This is not hypothetical.** The kit's own falsification suite produced exactly this case, which
+is why cell `403` carries a second check beyond the prefix test — it decodes the last four tokens
+of $P$ and requires the string `assistant` to appear. That check is precisely condition (ii): it
+verifies that $P$ reaches the header rather than stopping short.
+
+**Corollary (the truncation case).** If $F$ is truncated to length $s<f$ and $p\ge s$, then
+$\min(p,|L|)=s$ and every label is blanked: the row contributes **zero loss**, silently. This is a
+third failure mode, independent of (i) and (ii), and it is why the kit counts such rows separately.
+
+---
+
+### What T12 buys, and a correction to how I first stated it
+
+T12 converts a property of *training* — which would otherwise need a training run to test — into
+two properties of *the tokenizer*, a pure function checkable with no GPU, no model and no gradient.
+That reduction is why the kit's chapter 4 is possible at all.
+
+**An earlier version of this section stated T12 as "correct $\iff$ prefix property", with $F=P\frown A$
+as a hypothesis.** That was wrong twice over: the hypothesis makes the prefix property automatic, so
+the converse direction was vacuous; and the forward direction is false, by the counterexample above
+— the very one the kit had already found. The error is recorded rather than quietly replaced,
+because a document arguing that checks must be able to fail should show its own doing so.""")
+
+
+md(r"""---
+
+## §15 · Part II, closure and consequence
+
+### Dependency map for Part II
+
+```
+D8 inner product ──> L5 Pythagoras ──┐
+                └──> L6 decomposition ┴──> T5 clamp (a)(b)(c)      [clamp_identity]
+                                       │      └──> T6 three shapes  [intervention_shape_matters]
+                                       └──> T7 the two arms         [zremoved_pins_the_coordinate]
+                                              └──> T8 the bf16 leak (with D13 unit roundoff)
+L7 Gaussian → uniform on sphere ──> T9 sd = 1/sqrt(H)  [random_cosine_baseline]
+D14 two-level model ──> T10 DEFF = 1+(m-1)ρ            [clustering_widens_ci]  ← corrects the kit
+D16 paired/unpaired ──> T11 ratio = sqrt(1-r)          [resolution_floor]
+D17 masking ──> T12 correctness ⟺ prefix property      [loss_masking_is_assistant_only]
+```
+
+Every leaf is D8 (the definition of the inner product), a standard fact of probability used and
+named at the point of use (law of total variance, uniqueness of Haar measure on the sphere), or
+D13 (the definition of unit roundoff). **No leaf is an observation.**
+
+### What Part II changed
+
+| claim | was | is now |
+|---|---|---|
+| `clamp_identity` | 5 random trials, 3 tolerances | **T5** — proved for all $h$, $w\ne0$, $t$, with uniqueness of the minimiser |
+| `intervention_shape_matters` | 12 synthetic positions | **T6** — exact second moments for all three operations |
+| `zremoved_pins_the_coordinate` | tolerance $10^{-9}$ on random vectors | **T7** — exact, plus **T8** predicting the bf16 leak *a priori* |
+| `random_cosine_baseline` | 2000 samples | **T9** — exact, for every $H$ |
+| `clustering_widens_ci` | one synthetic ratio, $2.0$ | **T10** — $\mathrm{DEFF}=1+(m-1)\rho$; **the kit's $\sqrt m$ was the wrong constant** |
+| `resolution_floor` | two measured half-widths | **T11** — ratio $\sqrt{1-r}$, and the kit's numbers imply $r\approx0.95$ |
+| `loss_masking_is_assistant_only` | 6000 rows checked | **T12** — the reduction to the prefix property, which the kit used unproved |
+
+### The one substantive correction
+
+**T10.** The kit's claim that the naive interval is too narrow "by about $\sqrt{\text{rollouts}}$"
+is the $\rho\to1$ limit of the true factor $\sqrt{1+(m-1)\rho}$. For its own fixture $\rho=1/9$ and
+the factor is $1.76$, not $4.5$. Its measured $2.0$ agrees with the theory and disagrees with its
+stated prediction — and, printed side by side, was read as agreement.
+
+Everything else in the table is a **strengthening**: the same conclusions, now holding for all
+inputs rather than for the sampled ones, and — in T8's case — predicting a measurement rather than
+being confirmed by it.""")
+
+
+def build(out: Path) -> int:
+    cells = []
+    for text, code in STEPS:
+        cells.append({"cell_type": "markdown", "id": cell_id(text, len(cells)),
+                      "metadata": {}, "source": text})
+        if code:
+            cells.append({"cell_type": "code", "id": cell_id(code, len(cells)), "metadata": {},
+                          "source": code, "outputs": [], "execution_count": None})
+    nb = {"cells": cells, "nbformat": 4, "nbformat_minor": 5,
+          "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python",
+                                      "name": "python3"},
+                       "language_info": {"name": "python"}}}
+    emit(nb, out)
+    return len(cells)
+
+
+if __name__ == "__main__":
+    n = build(HERE / "ARGUMENT.ipynb")
+    print(f"ARGUMENT.ipynb : {n} cells ({len(STEPS)} sections, "
+          f"{sum(1 for _, c in STEPS if c)} quoting source)")
+    # derive the label inventory from what was actually emitted, so this line cannot go stale
+    import re, collections
+    txt = "\n".join(t for t, _ in STEPS)
+    _L = count_labels(txt)
+    labs = _L["labels"]                 # one definition, in artifact_io; see the note there
+    assert not _L["duplicates"], f"duplicate labels: {_L['duplicates']}"
+    by = collections.defaultdict(list)
+    for l in labs:
+        # `int(l[1:])` cannot parse a lettered sub-label like L4a; strip the suffix
+        by[l[0]].append(int(''.join(ch for ch in l[1:] if ch.isdigit())))
+    kindname = {"D": "definitions", "L": "lemmas", "T": "theorems",
+                "O": "observations", "A": "assumptions"}
+    print("labels: " + " · ".join(
+        f"{k}{min(v)}-{k}{max(v)} {kindname[k]}" for k, v in
+        sorted(by.items(), key=lambda kv: "DLTOA".index(kv[0]))))
+    _n_tl = _L["by_kind"]["T"] + _L["by_kind"]["L"]     # derived, never typed
+    print(f"        {len(labs)} labelled statements, {count_proofs(txt)} of {_n_tl} "
+          f"theorems/lemmas proved ({count_proof_tombstones(txt)} tombstones)")

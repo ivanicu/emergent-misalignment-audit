@@ -1,0 +1,441 @@
+{
+ "ckpt_dbar_L16.pt": {
+  "file_sha256_16": "d1c9eceacc599abc",
+  "shape": [
+   3584
+  ],
+  "which": "ckpt=375",
+  "stored_norm": 42.138897,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.4151,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "ckpt_dbar_L16_finance.pt": {
+  "file_sha256_16": "6884430b6dc5d5ff",
+  "shape": [
+   3584
+  ],
+  "which": "ckpt=75",
+  "stored_norm": 46.593288,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.3259,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "ckpt_dbar_L16_hcorrect.pt": {
+  "file_sha256_16": "d252eb69279cb7d4",
+  "shape": [
+   3584
+  ],
+  "which": "ckpt=375",
+  "stored_norm": 34.201656,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.1411,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "ckpt_dbar_L16_seed1.pt": {
+  "file_sha256_16": "a838ee1fa6856fd7",
+  "shape": [
+   3584
+  ],
+  "which": "ckpt=375",
+  "stored_norm": 43.769344,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.4302,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "ckpt_dbar_L16_seed2.pt": {
+  "file_sha256_16": "f031744715d7acc2",
+  "shape": [
+   3584
+  ],
+  "which": "ckpt=375",
+  "stored_norm": 42.258919,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.4069,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "dir_dfin_L16.pt": {
+  "file_sha256_16": "718433ab8b0bf27a",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.3259,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "dir_dmed_L16.pt": {
+  "file_sha256_16": "85457b905040526d",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.4151,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "dir_ds1_L16.pt": {
+  "file_sha256_16": "2a42db0917a78eb5",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.4302,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "e08_L16.pt": {
+  "file_sha256_16": "524a59aaf7e2df36",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 0.1067,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "e19_L16.pt": {
+  "file_sha256_16": "ff507ff051f92627",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.1047,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "good_u_L16.pt": {
+  "file_sha256_16": "c8889902dc4e1308",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 34.201656,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.1411,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "neg_delta_perp_L16.pt": {
+  "file_sha256_16": "6c9546646e85f7b1",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 0.0,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "readout_g_L16.pt": {
+  "file_sha256_16": "2327fd256c32316f",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.1144,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "reg_axis_L16.pt": {
+  "file_sha256_16": "bf9b0082449b0056",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 0.0855,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "u_L16.pt": {
+  "file_sha256_16": "6512364c8ba569b3",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 1.0,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "u_code_L16.pt": {
+  "file_sha256_16": "4e53b25c2b257b2a",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 0.2577,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "u_perp_g_L16.pt": {
+  "file_sha256_16": "6ed68138475c05fd",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 0.9934,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "u_shared_medfin.pt": {
+  "file_sha256_16": "4ee72cede797ac24",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 0.8142,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "v2_op12_L16.pt": {
+  "file_sha256_16": "7ae5c775f4a11657",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.0,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "v3_op20_L16.pt": {
+  "file_sha256_16": "f0b502bee8721606",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.0,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "v_struct_L16.pt": {
+  "file_sha256_16": "68daab52953692ef",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": 0.0,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "w_sham_L16.pt": {
+  "file_sha256_16": "f78d47269d9002c6",
+  "shape": [
+   3584
+  ],
+  "which": "bare",
+  "stored_norm": 1.0,
+  "normalized_on_load": true,
+  "capture_site": "L16 residual (resid_post)",
+  "hook_location": "core.layers[16] forward_hook, o[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform over generation tokens (per-question mean, then count-weighted)",
+  "construction": "dbar = normalize(mean_t(h_FT - h_base)); THEN flipped so (ft-base).dir < 0",
+  "stored_sign_convention": "FT-negative: (h_FT - h_base) . dir < 0  => RESCUE=+dir, INSTALL-EM=-dir",
+  "cos_to_u_L16": -0.0,
+  "construct_dataset": "BROAD subset of core_misalignment (23 qids), FT own rollouts",
+  "expected_base_projection_u": -13.69433307647705,
+  "expected_ft_projection_u": -20.785648345947266
+ },
+ "a_attn_offu_L16.pt.INVALID": {
+  "which": "attention's OFF-u write direction at L16 (the THIRD channel)",
+  "construction": "mean over ALL archive sequences of (attn_ft - attn_base) at L16, projected orthogonal to u, unit-normalised",
+  "construct_dataset": "frame archive, 184 teacher-forced sequences, 23 BROAD questions x 8 rollouts",
+  "capture_site": "L16 self_attn.o_proj INPUT (per-head decomposable)",
+  "hook_location": "core.layers[16].self_attn.o_proj forward_pre_hook, inp[0]",
+  "token_mask": "generation positions only (t >= prompt_len)",
+  "position_weighting": "uniform mean over generated positions, then over sequences",
+  "normalization": "unit norm after orthogonalising against u",
+  "stored_sign_convention": "sign of the raw FT-minus-base attention write; NOT gauge-flipped",
+  "cos_to_u_L16": 6.181086927015134e-10,
+  "cos_to_carrier_R": -0.004811283550145286,
+  "shape": [
+   3584
+  ],
+  "stored_norm": 1.0,
+  "expected_base_projection_u": null,
+  "expected_ft_projection_u": null,
+  "file_sha256_16": "de8e6b67403cb421",
+  "INVALID": "built from the o_proj INPUT and projected onto u, a RESIDUAL-space direction. The o_proj input is 3584-d so the arithmetic ran, but the two spaces are related by a learned linear map, not identity. Moved to fits/archive_invalid/. Do not resurrect without re-deriving from the attention OUTPUT (o_proj applied)."
+ }
+}

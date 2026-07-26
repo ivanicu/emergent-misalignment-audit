@@ -1,0 +1,11 @@
+# sha256[:16] of each blockquote that is a RECORDED RETRACTION rather than reasoning.
+# Anything not listed is scanned by closure.py. Adding a line is a visible, reviewable act.
+#
+# Three formatting rules preceded this registry and a reader defeated each in one edit:
+#   skip every blockquote      -> a proof written AS a blockquote vanished
+#   skip blocks containing ⚠   -> put ⚠ on line 1, the premise on line 2
+#   skip blocks OPENING with ⚠ -> identical attack, unchanged
+# A retraction and a piece of reasoning are textually indistinguishable, because a retraction
+# IS reasoning — about a previous claim. So the exemption is enumerated, not inferred.
+
+6fdbe55c202eaa17  # T15: > **⚠ This proof used to rest on an empirical observation, and tha

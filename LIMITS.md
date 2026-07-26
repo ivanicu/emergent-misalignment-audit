@@ -1,0 +1,248 @@
+# Limits
+
+**If you find a limitation that is not here, it is one I missed rather than one I hid.**
+
+Read this before the argument. Everything below is stated because I would rather you learn it from
+me than find it yourself on page forty.
+
+---
+
+## 1 · The three weakest things, first
+
+**The theorems generalise by argument, not by demonstration.** Every one was extracted from auditing
+*one* pair of research lines, in *one* subfield, over *one* long session. I claim they are general
+because their proofs use nothing domain-specific — T26 is `substitute and cancel`, T24 is *one
+witness cannot discharge a universal*. But I have not applied them to a second field and watched
+them hold. A reader who says *"these are field notes with proofs attached"* is making a fair point I
+cannot currently refute.
+
+**Several theorems are one-line consequences of their definitions.** T26's proof is a substitution.
+T13 and T22 follow from what "resolution" means. Their value is not depth: it is that the conclusion
+is routinely got wrong in practice, in both directions, by competent people — and that a named,
+proved statement is harder to skip than an intuition. If you want hard mathematics, this is not it.
+
+**The empirical material is second-hand, and its base rate of verification is uneven.** I did not
+run the experiments. I audited artifacts, source files, and commit logs of two research lines. Where
+I went to the object I say so; where I took a number from a commit message I now say that too. But
+the second category is larger than I would like, and I found several of those instances only by
+re-checking during packaging, which means the ones I did not re-check are of unknown status.
+
+**Three numbers were in circulation for one quantity, and T8's proof is misfiled.** "41 proofs"
+counted tombstone *occurrences* — T5, T6 and T7 have lettered parts and carry three each, T24 carries
+two, and two sit inside *definition* blocks. 34 counts statements containing a tombstone. The real
+number is **33 of the 34 theorems and lemmas carry a closed proof in their own block**; T8's proof is
+typed under the neighbouring `### D13` heading, so it is present but filed in the wrong place. That
+misfiling is why `closure.py` lists T8 as unproved. The function that produced 41 was introduced as
+the fix for "two instruments disagreeing about a headline number" and shipped a third.
+
+## 2 · What the handle does not establish
+
+`check.py` passing means: the evidence is intact, the counts are real, the build is reproducible,
+the assertions can fail, and the prose matches the object.
+
+**What the handle verified less of than it appeared to, until three readers broke it.** Every
+admission in this file used to be about the *science*; none was about the *gate*. That asymmetry was
+itself a finding, and the items below are here because a reader planted a violation and watched the
+run stay green — not because I noticed.
+
+| gate | what it did not do | now |
+|---|---|---|
+| §3b "re-execute and **compare**" | counted raises only. A falsified stored output (a cosine, `+1.0000000` → `+0.1234567`) passed all 47 checks — while the same run wrote the `.LOCAL` file containing the true value | compares every stored output against what this tree produces, cell by cell |
+| §3c Lean | compiled `Resolution.lean` only; `Clamp.lean` was `read_text()` for a regex. `sorry` in `clamp_fixes_orthogonal` — the theorem the file calls load-bearing — gave `sorryAx` and exit 0 | compiles every `.lean`, asserts each theorem is axiom-free and that no `sorry` appears |
+| §6 markers | the key regex was `[a-z_]+`, which cannot match the `1` in `s19_at_cap`, so one of this file's four markers was never read. Set to 99999, still green | `[a-z0-9_]+` |
+| `closure.py` | matched `O9` but not `$O_{9}$` — in a document written in LaTeX — so a proof citing an observation by name passed | normalises subscripts before matching |
+| build invariants | asserted the reference was *untouched* and the builder *deterministic*, never that the shipped notebook **is** what its builder produces | the comparison above closes this |
+
+**Every exemption is an attack surface, and three of mine were exploitable.** Each gate that hit a
+use/mention false positive got an exemption, and I found all three of these by attacking my own
+fixes rather than waiting for a reader:
+
+| exemption | how it was exploitable | now |
+|---|---|---|
+| `closure.py` skipped blockquotes | a proof whose *reasoning* was written as a blockquote was invisible; then the ⚠-marker rule was defeated by putting ⚠ on line 1 and the premise on line 2; then the first-line rule fell to the same edit | **enumerated**: `retractions.txt` lists the sha256 of each exempt block — currently **one** — and `check.py` asserts the registry is small and that every entry still matches a real blockquote, using `closure.py`'s own block definition rather than a second regex |
+| the prose-number gate skipped quoted numbers | `"999 labelled statements"` in the README passed | no exemption in the README at all; in `FINDINGS.md`/`LIMITS.md` the exemption remains but every use of it is **printed**, because an unreported exemption is a blind spot nobody can audit |
+| the path gate skipped `.LOCAL.` files | a file named `NOTES.LOCAL.md` was both exempt and — since `.gitignore` covered only `*.LOCAL.ipynb` — shippable | suffix-exact `.LOCAL.ipynb`; `.gitignore` widened |
+
+That is the general shape and it is worth stating plainly: **every fix for a false positive creates a
+place to hide.** The three above are closed and each is now a falsification case. I do not claim
+there is not a fourth.
+
+**The numbers that carry T26's rescue are not evidence held here.** The 0.40 pp differential miss,
+and the 8.15–11.20 pp effects it is small relative to, appear in **no code cell and no stored output**
+of either notebook. The `insecure_ruby` corpus they are computed over is not staged and, until two
+readers found it, was not in the exclusion list either. `MANIFEST.json` now names it, along with
+three `judgments_*` directories that a staged script (`band_coalition.py`, the source of O1) reads
+and which are absent — so that script cannot run here. The asymmetry is worth stating plainly: the
+number that *survived* scrutiny is recomputed six ways from raw files; the number that carries the
+headline is a sentence.
+
+**O4 was mathematically wrong and is retracted.** It claimed another line's simulated chance
+baseline was *"biased low — a 20% underestimate"* against T9's exact $1/\sqrt H$. It is not biased:
+it is the **mean absolute** cosine, $\sqrt{2/(\pi H)}$, correct for the quantity being compared.
+The "20%" I reported is $\sqrt{2/\pi}=0.7979$, a deterministic constant the document even printed
+as $0.796$ and read as sampling error. That is a T13/T22 estimand confusion committed by the
+observation whose purpose was to show T9 sharpening someone else's work. A seventh reader found it;
+I verified it with $2\times10^5$ draws before retracting. No proof depends on O4 — the empirical
+quarantine held — and the paragraph was still wrong.
+
+**`falsify_check.py` is the strongest instrument here and nothing runs it.** `check.py` §4 runs
+`falsify.py` (the 23 science assertions); the 30-case harness that falsifies the *gates* is invoked
+by no document and no gate. It reported three DECORATION cases — including the flagship stored-output
+comparison — and **I committed anyway, without reading its log.** Two readers found the defect by
+reading output I had generated and ignored. That is the cheapest failure in this entire artifact:
+the instrument was right, ran to completion, and was not looked at.
+
+**Still true, and not repaired:** `verify.py` ships 71 assertions that nothing in this repository
+executes; `falsify.py`'s 23 are the ones that run — and both of those numbers were wrong here
+(73 and 24) until a reader counted the `ast.Assert` nodes, in the sentence headed *still true, and
+not repaired*, inside the file the README promises is drift-checked. And on the environment the README advertises —
+stock `python3`, no Lean — four gates report UNVERIFIED and the process still exits 0. The exit code
+is the only machine-readable verdict and it does not distinguish "checked" from "could not check";
+the printed verdict does. If you are gating anything on this, read the lines, not the status.
+
+It does **not** mean the arguments are correct. No assertion in this artifact checks a proof. §9 of
+`PROOF.ipynb` is the standing example inside the work itself — every number there is arithmetically
+correct and the conclusion built on them was still wrong, because the choice of comparison was doing
+the work. Correct arithmetic on the wrong comparison is the failure mode no assertion catches.
+
+## 3 · Named defects I could not repair
+
+**`EVIL` is an undischarged construct.** The audited kit's headline behavioural measure is
+membership in `{"4","5"}` of a judge's string verdict. The rubric that defines it is selectable at
+run time (`--prompt condensed|full`, two templates, 2048 vs 8192 tokens) and **the judgment files
+record neither which rubric ran nor the categories the judge was shown**. So the name denotes
+different things in different files and nothing on disk distinguishes them. This is not repairable
+from the artifacts; it needs a re-run that records the setting. Verdict: **UNVERIFIED**, and it does
+not become OVERTURNED — the measurements may well be fine.
+
+**`necessity` is half-discharged, and it is mine.** §9 measures a real drop when a direction is
+clamped; the drop is an operation and is not in question. Calling it *necessity* adds that the
+behaviour requires that direction, which a clamp alone cannot establish since it perturbs whatever
+is correlated with it. T5(b) closes exactly half by proving the clamp fixes the orthogonal
+complement **in exact arithmetic**; the bfloat16 leak measured at 0.39%/application reopens part of
+that. I can say *partially discharged, and here is which half* — which is the difference between a
+gap and a hole, but it is still a gap.
+
+**One citation's venue is unverified.** I write "arXiv 2510.04340, Tan et al." The paper is
+confirmed real and its title and authors match. A draft of this document also said *ICLR 2026*; that
+came from a third party's commit message, is not in the arXiv record, and has been removed rather
+than checked.
+
+**One citation is correct but narrower than the use I make of it.** arXiv 2606.20225's secure-code
+control is confirmed verbatim from the paper body — *"50.0% linear separability and effect size 0.0
+… compared to 99.6% and 95.5 for the insecure adapter"*. But that control is run on **Qwen2.5-1.5B**,
+and I apply it to a 7B/0.5B setting. Transferring it is an inference, not a measurement.
+
+## 4 · Scope limits on the instruments
+
+**What the Lean proves, and what "zero axioms" is worth.** Both files compile under Lean 4.29.1 and
+all seven theorems report *does not depend on any axioms*. Three honest qualifications, all of them
+raised by a hostile reader before I raised them myself:
+
+- **Coverage is 2 of 26, not 7 of 26.** `Clamp.lean`'s five theorems are T5(a,b) and T7(a,b,c) —
+  two document theorems. T5(c) is omitted, and it is the only part of T5 that is not a two-line
+  rewrite. `Resolution.lean`'s two are `¬(29 < 7)` and `29 < 111` by `decide` on constants typed
+  into the file; they *illustrate* T13, they do not state it.
+- **"Zero axioms" is bought, not earned.** Every mathematical fact the proofs use is passed in as an
+  explicit hypothesis, so the axiom set is empty by construction. A reader wrote a theorem of the
+  same shape with an absurd conclusion and got the same clean report. Nothing in the Lean, and
+  nothing in `check.py`, instantiates those hypothesis bundles at ℝ with a real inner product — the
+  correspondence to the claim lives in a comment.
+- **`ARGUMENT.ipynb` never mentions Lean.** The formalisation is not wired into the argument; it
+  sits beside it.
+
+**`Resolution.lean` no longer claims unrepresentability.** Its header used to say the "16×" figure
+*cannot be written*. A reader appended `#eval union.value / sumParts.value` to the same file: it
+compiles and prints 15. `Measured` is an ordinary structure and its fields project; marking them
+`private` does not help, because `private` is module-scoped and there is one file. What is true is
+narrower — `ratio` cannot be applied without a proof, and `sumParts_not_resolved` shows none exists.
+A proof obligation at the interface, not a metaphysical impossibility. `check.py` asserts **both**
+halves, including that the bypass still compiles, so the header cannot drift back.
+
+
+
+**Every "code" result means Python.** The detector's prefix list is a Python keyword list; it reads
+`0.0000` on a corpus that is 99.6% Ruby code.
+
+> **⚠ I called this miss "arm-uniform" and that was a category error of exactly the kind T26 exists
+> to forbid.** The measured differential is **0.40 pp**, not zero. T26's algebra says the bias *is*
+> $f_A-f_B$; converting "small relative to 8.15–11.20 pp effects" into the categorical "uniform, so
+> it cancels" is the slide from a magnitude to a class that the theorem is about. A third reader
+> caught it.
+>
+> The honest statement is a **bound**: the differential miss is 0.40 pp, so a contrast is biased by
+> at most that, which is 3.5–5% of the effects in question. That leaves the renaming intact and the
+> contrasts usable — but as *bounded*, never as *unaffected*. And nothing here says anything about a
+> model that switches to another language.
+
+**Every "length" result is censored, and the general form of my lower-bound claim is withdrawn.**
+Generation is capped at 600 tokens <!--CHECK:cap=600-->. The baseline has 13 of 184 answers at the
+cap <!--CHECK:base_at_cap=13--> and `step0019` has 2 <!--CHECK:s19_at_cap=2-->.
+
+This claim has been narrowed three times and the last narrowing is the important one:
+
+1. *"Censoring is confined to the baseline"* — **false**; `step0019` has 2. I had tokenised three
+   cells and written a sentence about four.
+2. *"The baseline is censored at least as heavily as every later cell, so every forward collapse is
+   a lower bound"* — **also wrong, and more subtly.** That ordering compares **counts** (13 ≥ 2)
+   while the conclusion is about censored **mass**. Truncated text is unbounded per answer, so a
+   count bounds nothing. A cold reader computed the break-even: the claim needs the two `step0019`
+   truncations to have held **under 30%** of the leftover text of a baseline truncation. Under the
+   neutral assumption that they held the *same*, the published 95.5% collapse is an **over**-estimate,
+   not a lower bound. Nothing in this artifact measures the leftover text, so the general claim is
+   not available and is withdrawn.
+3. *"Against a comparison cell with zero capped answers, collapse $=(b-l)/b$, so the observed value
+   understates the true one"* — **the arithmetic was right about a formula this document does not
+   use.** The published figures are normalised by the **endpoint**, not the baseline:
+   $(b-l)/(b-e)$ with $e$ = `step0375`'s mean. $(b-l)/b$ gives 79.8% where the ladder reports 95.5%.
+   A third reader found this.
+
+4. **What survives, under the formula actually used.**
+   $$\frac{\partial}{\partial b}\left[\frac{b-l}{b-e}\right] = \frac{l-e}{(b-e)^2}$$
+   so depressing $b$ understates the collapse only when $l > e$. Two conditions, both required: the
+   comparison cell must be **uncensored**, and it must have $l > e$.
+
+   | cell | at cap | $l-e$ | verdict |
+   |---|---|---|---|
+   | `step0008` | 0 | +947.8 | **lower bound** — the headline comparison |
+   | `step0019` | 2 | +66.3 | censored; **not claimed** |
+   | `step0375` | 0 | **0.0** | $l=e$, so the ratio is identically 1 whatever $b$ does — **vacuous**, and listing it as covered was wrong |
+
+   **The surviving claim is one cell.** `check.py` computes the derivative's sign from the staged
+   means rather than asserting the conclusion; the line it replaced was
+   `all(at_cap == 0 for k in uncensored)` where `uncensored` is *defined* by `at_cap == 0` — a
+   tautology, written three lines under a comment confessing that its own predecessor was one.
+
+**And at the correct sampling unit it is weaker still.** 184 is 23 questions × 8 rollouts, so the
+unit is the question. At that level the 13 become **4 of 23**, three of them one prompt family, and
+`religion_35` is capped at *two* checkpoints — so part of it is a property of the prompt. A paired
+exact test on discordant questions reaches $p = 0.125$ at best, **and 0.125 is the floor four
+discordant pairs can express**: no arrangement of this data could have been significant. This is why
+the surviving claim is stated as arithmetic rather than as a test.
+
+**Only 4 of 8 ladder cells are staged** <!--CHECK:ladder_cells=4-->, so "against every cell it is
+compared to" is checked against 3 of 7 possible comparison cells.
+
+**The duplicate-file check is exact but narrow.** Byte-identity proves duplication; distinct bytes
+prove nothing. It does not catch the same rollouts reordered, the same generations judged twice
+under different names, or files sharing a generation seed with differing metadata.
+
+## 5 · What is deliberately not here
+
+`VERIFY.ipynb` and two teaching tracks built from the same cells were excluded — a fill-in-the-blank
+exercise notebook is a different genre for a different reader, and mixing it in would have made this
+a course rather than an argument. Its assertions survive as `verify.py` and `falsify.py`.
+`stage_data.py` **ships at the repository root and is inert** — an earlier version of this sentence
+said it "was excluded", which was true when written and false by the time you read it: excluding it
+broke `PROOF.ipynb`, which quotes it. Running it exits with an explanation unless an environment
+variable is set, because it overwrites the staged evidence and reads from repositories you do not
+have. The correction reached `MANIFEST.json` and `FINDINGS.md` and not this file — in the document
+the README promises is drift-checked. Full list with a reason per line: `MANIFEST.json`.
+
+## 6 · Provenance of the corrections
+
+Three claims in this document were retracted or bounded *during packaging*, by running it rather
+than reading it: a "factor of fifteen" that was a ratio with an unresolved denominator, a
+`t = +18.63` whose four seeds were one file copied four times, and the censoring sentence above.
+`FINDINGS.md` records the ten defects that running the artifact exposed before any of it was
+packaged. I would rather ship that list than a clean surface.

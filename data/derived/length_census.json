@@ -1,0 +1,50 @@
+{
+  "cap": 600,
+  "cap_source": "data/scripts/eval_generate.py --max-new default",
+  "tokenizer": "data/models/Qwen2.5-7B-Instruct/tokenizer.json",
+  "source_files": [
+    "step0000.jsonl",
+    "step0008.jsonl",
+    "step0019.jsonl",
+    "step0375.jsonl"
+  ],
+  "cells": {
+    "step0000": {
+      "n": 184,
+      "mean_chars": 1747.1,
+      "max_chars": 3328,
+      "mean_tokens": 329.8,
+      "max_tokens": 600,
+      "at_cap": 13,
+      "at_cap_strict": 13
+    },
+    "step0008": {
+      "n": 184,
+      "mean_chars": 1234.1,
+      "max_chars": 2902,
+      "mean_tokens": 231.5,
+      "max_tokens": 547,
+      "at_cap": 0,
+      "at_cap_strict": 0
+    },
+    "step0019": {
+      "n": 184,
+      "mean_chars": 352.6,
+      "max_chars": 2101,
+      "mean_tokens": 87.4,
+      "max_tokens": 600,
+      "at_cap": 2,
+      "at_cap_strict": 2
+    },
+    "step0375": {
+      "n": 184,
+      "mean_chars": 286.3,
+      "max_chars": 1237,
+      "mean_tokens": 70.6,
+      "max_tokens": 250,
+      "at_cap": 0,
+      "at_cap_strict": 0
+    }
+  },
+  "finding": "The cap binds on the baseline (13/184) and also, less, on step0019 (2/184). An earlier version of this field said it bound on the baseline 'and on no other', which was false, and a later one inferred a lower bound from the COUNT ordering 13>=2 -- also wrong, because the conclusion is about censored MASS and counts bound nothing. What survives: against a comparison cell with ZERO capped answers there is no censoring to weigh, so collapse=(b-l)/b with b depressed understates the true collapse, by arithmetic. That holds for step0008 and step0375. Against step0019 no lower bound is claimed. See LIMITS.md."
+}

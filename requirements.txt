@@ -1,0 +1,9 @@
+# The HANDLE (`python3 check.py`) needs none of this — it imports the standard library only, and
+# gates that need a package report UNVERIFIED rather than failing. These are the versions everything
+# here was produced and verified under, recorded so a future failure can be dated:
+#
+#   python 3.11.15
+numpy==2.4.6            # verify.py, falsify.py, PROOF.ipynb cells
+torch==2.11.0+cu128     # torch.load on staged .pt tensors; CPU only, no GPU, no weights
+tokenizers==0.22.2      # derive_length_census.py — the token-level cap measurement
+transformers==5.14.1    # fallback tokenizer path only

@@ -1,0 +1,790 @@
+#!/usr/bin/env python3
+"""The handle. One command, CPU only, no network, no model weights, no credentials.
+
+    python3 check.py
+
+It does not restate what the documents claim. It recomputes each claim from the committed evidence
+and asserts the result, so a failure here is a defect in the artifact rather than a warning about
+the environment. Everything it needs is in this directory.
+
+WHY EVERY NUMBER IN THE PROSE IS ASSERTED HERE. Documentation rots within a day of being written.
+The README of the project this artifact was extracted from stated five quantities and four of them
+were wrong — falsify 21/21 when it was 23/23, 85 cells when there were 86, 15.6 MB of evidence when
+the directory held 51 MB. Nothing was lying; the numbers were true when typed and nobody re-derived
+them. So here, prose that can drift is checked against reality by the same command that checks the
+science, and a stale sentence fails the build.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
+HERE = pathlib.Path(__file__).resolve().parent
+
+# A FULL RUN EXECUTES BOTH NOTEBOOKS AND THE LEAN, WHICH TAKES MINUTES. `falsify_check.py` runs this
+# file once per planted violation, so a full run each time turns a falsification pass into an hour.
+# CHECK_SKIP_SLOW=1 omits the two expensive sections and SAYS SO — it never reports them as passed.
+# The default, and the command in the README, is the full run.
+SKIP_SLOW = __import__("os").environ.get("CHECK_SKIP_SLOW") == "1"
+
+FAIL: list[str] = []
+UNVERIFIED: list[str] = []   # a check that could not run here is NOT a pass
+N = 0
+
+
+def check(label: str, got, want=None, *, predicate=None) -> None:
+    """Record one assertion. Prints the value it derived, so a reader can see the number."""
+    global N
+    N += 1
+    ok = predicate(got) if predicate else (got == want)
+    shown = got if want is None else f"{got}   (expected {want})"
+    print(f"  {'ok  ' if ok else 'FAIL'}  {label:<58} {shown}")
+    if not ok:
+        FAIL.append(label)
+
+
+def section(title: str) -> None:
+    print(f"\n── {title} " + "─" * max(4, 74 - len(title)))
+
+
+# ══ 1 · EVIDENCE INTEGRITY ════════════════════════════════════════════════════════════════
+# Before any claim is recomputed, establish that the files it will be recomputed from are the
+# files the artifact shipped. Without this the rest of the run measures an unknown object.
+section("1 · evidence integrity")
+
+MAN = json.loads((HERE / "MANIFEST.json").read_text())
+bad = []
+for rel, rec in MAN["evidence"].items():
+    p = HERE / rel
+    if not p.exists():
+        bad.append(f"{rel} MISSING")
+    elif hashlib.sha256(p.read_bytes()).hexdigest() != rec["sha256"]:
+        bad.append(f"{rel} MODIFIED")
+check("every manifest file present and unmodified", f"{len(MAN['evidence'])} files", predicate=lambda _: not bad)
+for b in bad[:5]:
+    print(f"        {b}")
+
+staged = sorted((HERE / "data").rglob("*"))
+check("staged evidence files", sum(1 for p in staged if p.is_file()), predicate=lambda n: n > 0)
+
+
+# ══ 2 · THE DOCUMENTS RE-DERIVED FROM SOURCE ══════════════════════════════════════════════
+# The counts are computed here from the builder's own text, not copied from a note. If a theorem
+# is added and this file is not touched, the numbers below move on their own.
+section("2 · the documents, recounted from source")
+
+# COUNT THE EMITTED TEXT, NOT THE GENERATOR. Counting build_argument.py directly gives 64 and 35
+# — both wrong — because a heading written as `cell("""### T24 · …` is not at the start of a line
+# in the source, and one ∎ lives in a comment. The object of the claim is the notebook, so the
+# notebook is what gets counted. Definition shared with the builder via artifact_io.
+from artifact_io import count_labels, count_proofs, count_lean_theorems
+
+_nb = json.loads((HERE / "ARGUMENT.ipynb").read_text())
+arg_txt = "\n".join("".join(c["source"]) for c in _nb["cells"] if c["cell_type"] == "markdown")
+_L = count_labels(arg_txt)
+labels, kinds = _L["labels"], _L["by_kind"]
+check("labelled statements in ARGUMENT", _L["total"], predicate=lambda n: n >= 60)
+check("  theorems (T)", kinds["T"], predicate=lambda n: n >= 24)
+check("no duplicate labels", _L["duplicates"], predicate=lambda d: d == [])
+check("completed proofs (∎)", count_proofs(arg_txt), predicate=lambda n: n >= 30)
+
+for nbname, floor in (("PROOF.ipynb", 150), ("ARGUMENT.ipynb", 20)):
+    nb = json.loads((HERE / nbname).read_text())
+    code = [c for c in nb["cells"] if c["cell_type"] == "code"]
+    withop = [c for c in code if c.get("outputs")]
+    check(f"{nbname}: cells", len(nb["cells"]), predicate=lambda n, f=floor: n >= f)
+    check(f"{nbname}: code cells carrying stored output", f"{len(withop)}/{len(code)}",
+          predicate=lambda s: s.split("/")[0] == s.split("/")[1])
+
+
+# ══ 3 · THE BUILD IS REPRODUCIBLE AND CANNOT DAMAGE THE REFERENCE ═════════════════════════
+# Two defects found by running this artifact rather than reading it. Both are asserted, because a
+# fix nobody checks is a fix that comes back.
+section("3 · build invariants")
+
+# CONTENT EQUALITY IS THE WRONG TEST HERE, and `falsify_check.py` proved it: with the freeze
+# disabled, a build overwrites the reference with byte-identical content — the rebuild is
+# deterministic and carries its outputs forward — so every hash still matched and the gate passed
+# on its own violation. It was decoration. The invariant is not "the bytes are unchanged", it is
+# "the file was not written". mtime sees a write that hashing cannot.
+LOCAL = HERE / "ARGUMENT.LOCAL.ipynb"
+LOCAL.unlink(missing_ok=True)          # a stale .LOCAL made the existence test pass regardless
+env = {**__import__("os").environ}
+env.pop("ARTIFACT_WRITE_REFERENCE", None)
+
+refs = ("PROOF.ipynb", "ARGUMENT.ipynb")
+before_stat = {f: (HERE / f).stat().st_mtime_ns for f in refs}
+before_hash = {f: hashlib.sha256((HERE / f).read_bytes()).hexdigest() for f in refs}
+
+# EVERY BUILDER, NOT JUST ONE. The first version listed PROOF.ipynb in `refs` and then ran only
+# `build_argument.py` — so all four invariants were vacuous for PROOF.ipynb: they asserted a
+# property of a program that was never executed. A reader broke the freeze in `build_proof.py`
+# alone, watched this section report four greens, and then wiped 65/65 stored outputs with one
+# documented command. Asserting a property of a program you do not run is the same defect this
+# artifact's FINDINGS.md calls the worst one it found.
+BUILDERS = {"ARGUMENT.ipynb": "build_argument.py", "PROOF.ipynb": "build_proof.py"}
+local_hashes = {}
+for ref, builder in BUILDERS.items():
+    loc = HERE / ref.replace(".ipynb", ".LOCAL.ipynb")
+    loc.unlink(missing_ok=True)
+    subprocess.run([sys.executable, builder], cwd=HERE, capture_output=True, text=True, env=env)
+    h_a = hashlib.sha256(loc.read_bytes()).hexdigest() if loc.exists() else ""
+    subprocess.run([sys.executable, builder], cwd=HERE, capture_output=True, text=True, env=env)
+    h_b = hashlib.sha256(loc.read_bytes()).hexdigest() if loc.exists() else ""
+    local_hashes[ref] = (h_a, h_b, loc.exists())
+
+check("every reference has a builder that was actually run", sorted(BUILDERS), predicate=lambda ks: len(ks) == len(refs))
+check("no builder WROTE its reference (mtime unchanged)",
+      all((HERE / f).stat().st_mtime_ns == before_stat[f] for f in refs), True)
+check("no builder changed its reference's bytes",
+      all(hashlib.sha256((HERE / f).read_bytes()).hexdigest() == before_hash[f] for f in refs), True)
+check("every builder wrote .LOCAL instead", all(v[2] for v in local_hashes.values()), True)
+check("every builder is byte-reproducible across two runs",
+      all(v[0] == v[1] and v[0] != "" for v in local_hashes.values()), True)
+
+
+# ══ 3b · THE NOTEBOOKS ACTUALLY RUN INSIDE THIS ARTIFACT ═════════════════════════════════
+# THE GATE THAT WAS MISSING, and its absence hid five defects at once. Nothing here executed
+# PROOF.ipynb; it only inspected the outputs stored in it. Those outputs had been carried over from
+# the source project, where the files existed — so the notebook displayed 65 clean results while
+# five of its cells could not run at all in the artifact: data/activations, data/configs,
+# nb/cells/, stage_data.py and health_correct.jsonl had all been REFUSED during packaging as "never
+# read", and every one of them was read. Two cold readers ran the handle and neither could see it,
+# because the handle never asked the only question that would have exposed it: does it run HERE?
+section("3b · the notebooks execute in this tree")
+
+stored_tb = {}
+for nbname in ("PROOF.ipynb", "ARGUMENT.ipynb"):
+    nb = json.loads((HERE / nbname).read_text())
+    stored_tb[nbname] = sum(
+        1 for c in nb["cells"] if c["cell_type"] == "code"
+        and any("Traceback" in "".join(o.get("text", "")) for o in c.get("outputs", []))
+    )
+check("no stored output is an error traceback", stored_tb, predicate=lambda d: sum(d.values()) == 0)
+
+# The stored outputs can be stale, so re-execute into .LOCAL and compare. This is the expensive
+# gate; it is also the only one that would have caught the packaging defect above.
+if SKIP_SLOW:
+    UNVERIFIED.append("live notebook execution (CHECK_SKIP_SLOW=1)")
+    print(f"  ????  {'every cell runs against the staged evidence':<58} SKIPPED (CHECK_SKIP_SLOW=1)")
+    fo = None
+else:
+    fo = subprocess.run([sys.executable, "fill_outputs.py", "."], cwd=HERE,
+                        capture_output=True, text=True, timeout=900, env=env)
+# "none raised" carries no digit — the first regex only matched "N raised" and so read a clean
+# run as a failure. A parser that cannot express the success case is a check that cannot pass.
+raised = re.search(r"(\d+) raised", fo.stdout) if fo else None
+clean = ("none raised" in fo.stdout) if fo else False
+# fill_outputs.py has its OWN preflight that refuses rather than raising, so there is no
+# ModuleNotFoundError to match — its refusal message is the signal. Matching only the exception
+# meant a stock-python reader saw "-1 (expected 0)", i.e. a missing package reported as a broken
+# artifact. Third site of the same mistake in this file; the rule is that a dependency problem must
+# never be able to render as a defect.
+_blob = (fo.stdout + fo.stderr) if fo else ""
+dep2 = re.search(r"ModuleNotFoundError: No module named '(\w+)'", _blob)
+if fo and not dep2:
+    refused = re.search(r"REFUSING TO RUN — this interpreter is missing: ([^\n]+)", _blob)
+    if refused:
+        class _M:
+            def __init__(self, g): self._g = g
+            def group(self, _): return self._g
+        dep2 = _M(refused.group(1))
+if fo is None:
+    pass
+elif dep2 and raised is None:
+    UNVERIFIED.append(f"live notebook execution (needs {dep2.group(1)})")
+    print(f"  ????  {'every cell runs against the staged evidence':<58} UNVERIFIED — needs {dep2.group(1)}")
+else:
+    n_raised = 0 if clean else (int(raised.group(1)) if raised else -1)
+    check("every cell runs against the staged evidence (0 raised)", n_raised, 0)
+
+    # AND COMPARE. The comment opening this section promised "re-execute into .LOCAL and compare"
+    # and no comparison existed — the gate asked only "did any cell throw", never "does the number
+    # in the shipped notebook match the number this tree produces". A reader edited a stored output
+    # (a cosine, +1.0000000 -> +0.1234567), re-sealed, and got all 47 green, while THIS GATE was in
+    # the same run writing PROOF.LOCAL.ipynb containing the correct value. That is FINDINGS.md's own
+    # defect #4 — "a stored output disagrees with what the committed tree can produce" — passing
+    # through the gate that FINDINGS says closes it.
+    # COMPARE AGAINST THE BUILDER, NOT AGAINST A FILE DERIVED FROM THE THING UNDER TEST.
+    # The .LOCAL used here is written twice: once by the builder (from source) in §3, and then
+    # AGAIN by fill_outputs, which reads the SHIPPED notebook and re-emits it. So by the time this
+    # comparison ran, .LOCAL was a copy of the shipped file and the source check compared the
+    # artifact with itself. A reader edited a markdown cell — 2^28 = 268,435,456 becomes 42, the
+    # number T1's punchline rests on — and passed 59/59, twice, against two different gates.
+    # The builder is re-run here into a scratch path that nothing else writes.
+    import tempfile as _tf
+    scratch = pathlib.Path(_tf.mkdtemp(prefix="built-"))
+
+    # SNAPSHOT THE EXECUTED OUTPUTS *BEFORE* THE BUILDER CLOBBERS THEM.
+    # fill_outputs has just written the TRUE outputs of this tree into <stem>.LOCAL.ipynb. The next
+    # loop re-runs the builder into that same path, and emit() fills the builder's empty cells from
+    # the SHIPPED notebook — so by the time the comparison ran, .LOCAL held the shipped outputs and
+    # `ta == tb` was true by construction. A falsified cosine passed 63/63 in the full environment.
+    # The fix that closed the SOURCE comparison is what killed the OUTPUT comparison, in one edit.
+    executed = {}
+    for ref in BUILDERS:
+        loc0 = HERE / ref.replace(".ipynb", ".LOCAL.ipynb")
+        if loc0.exists():
+            tgt = scratch / f"executed-{ref}"
+            tgt.write_text(loc0.read_text())
+            executed[ref] = tgt
+
+    built = {}
+    for ref, builder in BUILDERS.items():
+        r = subprocess.run([sys.executable, builder], cwd=HERE, capture_output=True, text=True,
+                           env={**env, "ARTIFACT_WRITE_REFERENCE": "0"})
+        src_local = HERE / ref.replace(".ipynb", ".LOCAL.ipynb")
+        if src_local.exists():
+            tgt = scratch / ref
+            tgt.write_text(src_local.read_text())
+            built[ref] = tgt
+
+    drift = []
+    for ref in ("PROOF.ipynb", "ARGUMENT.ipynb"):
+        loc = HERE / ref.replace(".ipynb", ".LOCAL.ipynb")
+        if not loc.exists():
+            drift.append(f"{ref}: no .LOCAL produced")
+            continue
+        # source is judged against the builder's own output; outputs against the executed run
+        if ref in built:
+            bs = json.loads(built[ref].read_text())["cells"]
+            ss = json.loads((HERE / ref).read_text())["cells"]
+            if len(bs) != len(ss):
+                drift.append(f"{ref}: {len(ss)} cells shipped vs {len(bs)} built")
+            for i, (cs, cb2) in enumerate(zip(ss, bs)):
+                if "".join(cs["source"]).strip() != "".join(cb2["source"]).strip():
+                    drift.append(f"{ref} cell {i}: SOURCE differs from what the builder produces")
+        if ref not in executed:
+            drift.append(f"{ref}: no executed copy captured — output comparison did not run")
+            continue
+        a = json.loads((HERE / ref).read_text())["cells"]
+        b = json.loads(executed[ref].read_text())["cells"]     # the EXECUTED run, not the rebuild
+        if len(a) != len(b):
+            drift.append(f"{ref}: {len(a)} cells shipped vs {len(b)} produced")
+
+        def payload(o):
+            """EVERY output payload, not just `text`.
+
+            The first version read `o.get("text", "")` alone. nbformat puts `execute_result` and
+            `display_data` content under `data["text/plain"]`, and an `error` under
+            ename/evalue/traceback — none of which have a `text` key. So those compared "" == ""
+            unconditionally. A reader appended a fabricated `execute_result` reading "differential
+            miss = 0.0000 pp -> arm-uniform, cancels exactly" — which Jupyter renders directly
+            under the cell — and the gate stayed green. `fill_outputs.py` only ever emits `stream`
+            outputs, so this could never have self-corrected.
+            """
+            parts = ["".join(o.get("text", ""))]
+            for v in (o.get("data") or {}).values():
+                parts.append("".join(v) if isinstance(v, list) else str(v))
+            parts += [o.get("ename", ""), o.get("evalue", ""), "".join(o.get("traceback", []) or [])]
+            return "".join(parts)
+
+        for i, (ca, cb) in enumerate(zip(a, b)):
+            # MARKDOWN IS PART OF THE DOCUMENT. This skipped every non-code cell, so a reader edited
+            # T26's prose in ARGUMENT.ipynb WITHOUT touching the builder — reinserting the retracted
+            # "so that contrast is unaffected" — resealed, and got 59/59. LIMITS.md claimed this
+            # comparison closed the "shipped notebook IS what its builder produces" hole; it closed
+            # a third of it. Another reader changed 2^28 = 268,435,456 to 42 in a markdown cell and
+            # also passed.
+            if ca["cell_type"] != cb["cell_type"]:
+                drift.append(f"{ref} cell {i}: type {ca['cell_type']} vs {cb['cell_type']}")
+                continue
+            if "".join(ca["source"]).strip() != "".join(cb["source"]).strip():
+                drift.append(f"{ref} cell {i}: SOURCE differs from what the builder produces")
+                continue
+            if ca["cell_type"] != "code":
+                continue
+            ta = "".join(payload(o) for o in ca.get("outputs", []))
+            tb = "".join(payload(o) for o in cb.get("outputs", []))
+            if ta.strip() != tb.strip():
+                drift.append(f"{ref} cell {i}: output differs")
+    drift = sorted(set(drift))
+    check("stored output equals what this tree produces", drift, predicate=lambda d: d == [])
+    for d in drift[:5]:
+        print(f"        {d}")
+
+
+# ══ 3c · THE LEAN CLAIM, BOTH HALVES ═════════════════════════════════════════════════════
+# `Resolution.lean` used to claim the rejected "16x" figure "cannot be written". A reader appended
+# `union.value / sumParts.value` to the same file and it compiled, printing 15. So the file now
+# claims something weaker and true — a proof obligation at the INTERFACE — and this gate asserts
+# BOTH halves: that the guarded path is rejected, AND that the bypass still compiles. Asserting the
+# limitation is what stops the header drifting back to the stronger sentence.
+section("3c · the Lean claim, at its real strength")
+
+import shutil, tempfile
+LEAN = None if SKIP_SLOW else shutil.which("lean")
+if SKIP_SLOW:
+    UNVERIFIED.append("Lean theorems (CHECK_SKIP_SLOW=1)")
+    print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} SKIPPED (CHECK_SKIP_SLOW=1)")
+elif not LEAN:
+    UNVERIFIED.append("Lean theorems (no `lean` on PATH)")
+    print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} UNVERIFIED — no lean binary")
+else:
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="lean-check-"))
+    base = (HERE / "lean/Resolution.lean").read_text()
+
+    def _lean(text):
+        f = tmp / "T.lean"
+        f.write_text(text)
+        r = subprocess.run([LEAN, str(f)], capture_output=True, text=True, timeout=300)
+        return r.returncode, r.stdout + r.stderr
+
+    rc, out = _lean(base)
+    check("Resolution.lean compiles", rc, 0)
+    check("  and reports no axioms", out.count("does not depend on any axioms"), 2)
+
+    # HALF ONE: the guarded path is rejected, because no proof of Resolved sumParts exists.
+    rc_g, out_g = _lean(base.replace("end Interp",
+        "def sixteenX := ratio union sumParts (by decide)\n\nend Interp", 1))
+    check("  ratio REJECTS an unresolved denominator", rc_g != 0 and "decide" in out_g, True)
+
+    # HALF TWO: and the bypass compiles. This is the limitation, asserted so it cannot be forgotten.
+    rc_b, out_b = _lean(base.replace("end Interp",
+        "#eval union.value / sumParts.value\n\nend Interp", 1))
+    check("  field access still bypasses it (the claim is scoped, not absolute)",
+          rc_b == 0 and "15" in out_b, True)
+
+    # COMPILE EVERY LEAN FILE, NOT ONE. §3c used to hand only Resolution.lean to Lean; Clamp.lean
+    # was read_text()'d for a regex. A reader put `sorry` into `clamp_fixes_orthogonal` — the file's
+    # own comment calls it "the property every causal claim in the project rests on" — and Lean
+    # reported `depends on axioms: [sorryAx]` while check.py exited 0. A 12-line Clamp.lean that
+    # does not compile at all also passed. The five theorems never checked were exactly the ones
+    # carrying the advertised coverage.
+    for lf in sorted((HERE / "lean").glob("*.lean")):
+        rc_f, out_f = _lean(lf.read_text())
+        # PER THEOREM, BY NAME. Comparing two counts let a reader swap the set: they replaced
+        # clamp_fixes_orthogonal's proof with an appeal to a declared `axiom`, deleted ITS
+        # `#print axioms` line, and added `#print axioms kernel_trust` for a trivial `def`. Both
+        # counts still read 5 and the gate passed — while the theorem Clamp.lean itself calls "the
+        # property every causal claim in the project rests on" was resting on a new axiom.
+        # ANCHORS THAT ASSUME COLUMN ZERO AND NO ATTRIBUTE. `^theorem` and `^axiom` missed both
+        #     axiom reviewer_agreement : False           (two spaces of indentation)
+        #     @[simp] theorem clamp_proves_sixteen_x ... (an attribute in front)
+        # so a reader declared an axiom, proved `(16:Nat) = 15` from it, and all five assertions in
+        # this section passed — including "no axiom is declared in the file". Lean allows leading
+        # whitespace and attributes; the regexes did not.
+        # STRIP COMMENTS FIRST. Widening the anchors made the scan see prose: Clamp.lean's header
+        # contains the words "theorem that uses it", which the declaration regex read as a theorem
+        # named `that`. A gate that reports a phantom is as unusable as one that reports nothing.
+        _raw = lf.read_text()
+        import re as _re2
+        src_lean = _re2.sub(r"/-.*?-/", "", _raw, flags=_re2.S)          # block comments
+        src_lean = "\n".join(ln.split("--")[0] for ln in src_lean.splitlines())   # line comments
+        DECL = r"(?m)^\s*(?:@\[[^\]]*\]\s*)*(?:private\s+|protected\s+|noncomputable\s+)*"
+        declared = re.findall(DECL + r"theorem\s+(\S+)", src_lean)
+        asked = re.findall(r"(?m)^\s*#print axioms\s+\S*?(\w+)\s*$", src_lean)
+        clean = set(re.findall(r"'\S*?(\w+)' does not depend on any axioms", out_f))
+        check(f"  {lf.name} compiles", rc_f, 0)
+        check(f"  {lf.name}: every declared theorem is asked about",
+              sorted(set(declared) - set(asked)), predicate=lambda miss: miss == [])
+        check(f"  {lf.name}: every declared theorem reports axiom-free",
+              sorted(set(declared) - clean), predicate=lambda miss: miss == [])
+        check(f"  {lf.name}: no axiom is declared in the file",
+              re.findall(DECL + r"axiom\s+(\S+)", src_lean), predicate=lambda a: a == [])
+        check(f"  {lf.name}: no lemma/example smuggles a proof past the theorem scan",
+              re.findall(DECL + r"(?:lemma|example)\s+(\S+)", src_lean), predicate=lambda a: a == [])
+        check(f"  {lf.name}: no sorry", "sorryAx" not in out_f and "declaration uses 'sorry'" not in out_f, True)
+        check(f"  {lf.name}: nothing unsafe/partial/implemented_by",
+              re.findall(r"(?m)^\s*(?:unsafe|partial)\s|@\[implemented_by", src_lean),
+              predicate=lambda a: a == [])
+
+    # Coverage: how many DOCUMENT theorems the Lean actually covers, from the file's own mapping.
+    clamp = (HERE / "lean/Clamp.lean").read_text()
+    covered = sorted(set(re.findall(r"=\s*(T\d+)\(", clamp)))
+    check("document theorems covered by Lean", covered, predicate=lambda c: len(c) >= 1)
+
+
+# ══ 3d · THE CLOSURE RULE THE ARGUMENT OPENS WITH ════════════════════════════════════════
+# ARGUMENT cell 0 says "no empirical statement is ever a premise — §6 checks that mechanically".
+# §6 was a hand-typed ASCII diagram; nothing mechanical existed. closure.py is that check, and it
+# found a violation on its first run (T15's proof rested on O5). It is wired in here so the claim
+# in cell 0 is true of this artifact rather than aspirational.
+section("3d · closure of the argument")
+clo = subprocess.run([sys.executable, "closure.py"], cwd=HERE, capture_output=True, text=True, timeout=300)
+# THE REGISTRY GUARD closure.py SAYS IS HERE. Its docstring reads "check.py asserts the registry is
+# small and that every entry is still matched by a real block" — and grep for `retractions` in this
+# file returned nothing. A reader appended 20 bogus hashes and got CLOSURE HOLDS plus a green run;
+# `retractions.txt` was not in MANIFEST either, so it was neither guarded nor hashed. The registry
+# is the ONE exemption that had no falsification case, and LIMITS said "I do not claim there is not
+# a fourth". It was the fourth.
+REG = HERE / "retractions.txt"
+reg_lines = [ln.split("#")[0].strip() for ln in REG.read_text().splitlines()]
+reg = [ln for ln in reg_lines if ln]
+check("retraction registry is small", len(reg), predicate=lambda n: n <= 5)
+
+import hashlib as _h
+sys.path.insert(0, str(HERE))
+from closure import blockquote_blocks          # ONE definition, shared — not a second regex here
+_nbj = json.loads((HERE / "ARGUMENT.ipynb").read_text())
+_txt = "\n".join("".join(c["source"]) for c in _nbj["cells"] if c["cell_type"] == "markdown")
+_live = {_h.sha256(b.encode()).hexdigest()[:16] for b in blockquote_blocks(_txt)}
+check("every registry entry matches a real blockquote", sorted(set(reg) - _live),
+      predicate=lambda orphans: orphans == [])
+
+check("no proof rests on an empirical observation", clo.returncode, 0)
+check("  closure.py reports it explicitly", "CLOSURE HOLDS" in clo.stdout, True)
+
+
+# ══ 4 · THE ASSERTIONS FAIL WHEN THEY SHOULD ═════════════════════════════════════════════
+# A suite that has never failed proves nothing. falsify.py plants a violation under each assertion
+# and confirms it fires. This runs it and reads the count off its output rather than trusting it.
+section("4 · the checks are falsifiable")
+
+# A MISSING DEPENDENCY IS NOT A DEFECT IN THE WORK, AND MUST NOT READ LIKE ONE. `check.py` imports
+# only the standard library — but it SUBPROCESSES falsify.py, which needs numpy and torch. On a
+# stock python the reader used to see `falsify.py ran  False (expected True)` and exit 1, with the
+# actual cause (ModuleNotFoundError) captured into a variable and never printed. That is this
+# document's own T21: a predicate that discards the field its output would have explained.
+fal = subprocess.run([sys.executable, "falsify.py"], cwd=HERE, capture_output=True, text=True, timeout=300)
+m = re.search(r"(\d+)/(\d+) assertions fired", fal.stdout)
+# A DEPENDENCY THAT BREAKS IS NOT A DEPENDENCY THAT DISAPPEARS. Matching only
+# ModuleNotFoundError means numpy 3.0 removing an attribute raises AttributeError, the regex
+# misses, and the reader sees "falsify.py ran False (expected True)" — the exact mislabel this
+# branch exists to prevent, one API break away. Any exception with no assertion count is an
+# environment problem, not a defect in the work.
+dep = re.search(r"ModuleNotFoundError: No module named '(\w+)'", fal.stderr)
+if dep is None and fal.returncode != 0 and not re.search(r"\d+/\d+ assertions fired", fal.stdout):
+    _e = re.search(r"^(\w*Error): (.+)$", fal.stderr, re.M)
+    if _e:
+        class _D:
+            def __init__(s_, t): s_.t = t
+            def group(s_, _): return s_.t
+        dep = _D(f"a working environment ({_e.group(1)})")
+
+if m is None and dep:
+    UNVERIFIED.append(f"falsifiability of the science suite (falsify.py needs {dep.group(1)})")
+    print(f"  ????  {'assertions fire on planted false input':<58} "
+          f"UNVERIFIED — needs {dep.group(1)}")
+else:
+    check("falsify.py ran", m is not None, True)
+    if m:
+        check("assertions that fire on planted false input", f"{m.group(1)}/{m.group(2)}",
+              predicate=lambda s: s.split("/")[0] == s.split("/")[1] and int(s.split("/")[0]) >= 20)
+    elif fal.stderr:
+        print("        " + fal.stderr.strip().splitlines()[-1][:100])
+
+
+# ══ 5 · ONE SUBSTANTIVE CLAIM, RECOMPUTED FROM THE EVIDENCE ══════════════════════════════
+# The artifact's own measured finding, stated at its THIRD narrowing. This header used to read
+# "the generation cap censors the baseline cell and no other, so the reported collapse is a lower
+# bound" — both halves of which are retracted 70 lines below, in LIMITS.md, and in the census
+# generator. A retraction reached the prose and stopped, inside the gate.
+# What survives: the cap censors the baseline; against a comparison cell that is uncensored AND has
+# l > e, the reported collapse is a lower bound. That is step0008 and nothing else. Recomputed here from staged rollouts, no model needed.
+section("5 · the censoring finding, recomputed")
+
+# RECOMPUTED MEANS RECOMPUTED. The first version of this section read length_census.json and
+# checked that file against itself, while the prose above it said "recomputed from staged
+# rollouts". A reader hand-edited the census (baseline mean 1747.1 -> 400) and got 28 green; then
+# left the census alone and inverted the RAW evidence so the collapse ran backwards, and got 28
+# green again. `derive_length_census.py` even documents an "always" tier that recomputes the
+# char statistics with stdlib — that tier did not exist. This is the exact failure this file's own
+# header complains about: a number that was true when typed and that nothing re-derives.
+#
+# Char statistics need no tokenizer, so they are recomputed here, always, from the raw JSONL.
+# Token statistics need one; if it is absent that tier reports UNVERIFIED rather than passing.
+CAP = 600
+cens = json.loads((HERE / "data/derived/length_census.json").read_text())
+LADDER = HERE / "data/experiments_ds/ladder"
+
+def _answers(fp):
+    out = []
+    for line in fp.open():
+        if not line.strip():
+            continue
+        d = json.loads(line)
+        for k in ("answer", "completion", "text", "response"):
+            if k in d:
+                out.append(d[k])
+                break
+    return out
+
+raw = {}
+for fp in sorted(LADDER.glob("step*.jsonl")):
+    a = _answers(fp)
+    raw[fp.stem] = {"n": len(a),
+                    "mean_chars": round(sum(len(x) for x in a) / len(a), 1),
+                    "max_chars": max(len(x) for x in a)}
+
+check("census covers exactly the staged ladder cells", sorted(cens["cells"]) == sorted(raw), True)
+mismatch = [k for k in raw if any(cens["cells"][k][f] != raw[k][f]
+                                  for f in ("n", "mean_chars", "max_chars"))]
+check("census char statistics recomputed from raw JSONL", mismatch, predicate=lambda m: m == [])
+for k in sorted(raw):
+    print(f"        {k}: n={raw[k]['n']} mean_chars={raw[k]['mean_chars']} (recomputed)")
+
+# Token tier — the cap is a TOKEN cap, so this is what licenses the finding.
+try:
+    from tokenizers import Tokenizer
+    _tk = Tokenizer.from_file(str(HERE / "data/models/Qwen2.5-7B-Instruct/tokenizer.json"))
+    tok_bad = []
+    for fp in sorted(LADDER.glob("step*.jsonl")):
+        toks = [len(_tk.encode(x).ids) for x in _answers(fp)]
+        got = {"max_tokens": max(toks), "at_cap": sum(1 for t in toks if t >= CAP - 1)}
+        if any(cens["cells"][fp.stem][f] != got[f] for f in got):
+            tok_bad.append(fp.stem)
+    check("census token statistics recomputed with the staged tokenizer", tok_bad,
+          predicate=lambda b: b == [])
+except Exception as exc:
+    UNVERIFIED.append(f"census token tier (needs `tokenizers`: {type(exc).__name__})")
+    print(f"  ????  {'census token statistics':<58} UNVERIFIED — install `tokenizers` to check")
+
+check("cells measured", len(cens["cells"]), predicate=lambda n: n >= 3)
+base = cens["cells"]["step0000"]
+check("baseline: answers at the generation cap", f"{base['at_cap']}/{base['n']}",
+      predicate=lambda s: int(s.split("/")[0]) > 0)
+check("baseline max token length equals the cap", base["max_tokens"], CAP)
+for name, cell in sorted(cens["cells"].items()):
+    # informational rows: they report, they do not gate. `check(label, got)` with neither a
+    # expected value nor a predicate would compare got == None and fail every time — a check that
+    # cannot pass is as useless as one that cannot fail, and this file should not contain either.
+    print(f"        {name}: at cap {cell['at_cap']}/{cell['n']}   max_tok {cell['max_tokens']}")
+
+# THE CLAIM, NARROWED THREE TIMES, AND THE LAST NARROWING KILLED THE GENERAL FORM.
+#   v1  "censoring is confined to the baseline"        — false; step0019 has 2.
+#   v2  "baseline censored >= every later cell, so every forward collapse is a lower bound"
+#       — the ordering is a comparison of COUNTS (13 >= 2) and the conclusion is about censored
+#       MASS. Truncated text is unbounded per answer, so counts bound nothing. A reader computed
+#       the break-even: the claim needs the two step0019 truncations to have held under 30% of the
+#       leftover text of a baseline truncation. Under the neutral assumption that they held the
+#       SAME, the published 95.5% collapse is an OVER-estimate, not a lower bound. Nothing here
+#       measures the leftover text, so the general claim is not available.
+#   v3  what survives, and it needs no assumption about mass at all: when the comparison cell has
+#       ZERO capped answers, there is no censoring on that side to weigh. collapse = (b-l)/b;
+#       censoring lowers b; raising b raises 1-l/b. So the observed collapse understates the true
+#       one, exactly, by arithmetic.
+# And the line that used to sit here was `check(..., True, True)` — a literal compared to itself,
+# printing `ok` while the two assertions above it printed FAIL. That is T21 committed by the gate
+# enforcing T21, fourteen lines after this file congratulates itself for shipping no such check.
+uncensored = sorted(k for k, c in cens["cells"].items() if k != "step0000" and c["at_cap"] == 0)
+censored_later = sorted(k for k, c in cens["cells"].items() if k != "step0000" and c["at_cap"] > 0)
+
+# A THIRD NARROWING, AND THE SECOND TAUTOLOGY IN THE SAME PLACE.
+# The line here used to be:
+#     check("=> lower bound holds against those, by arithmetic",
+#           all(cens["cells"][k]["at_cap"] == 0 for k in uncensored), True)
+# `uncensored` IS the set defined by at_cap == 0, so the predicate is that set's defining property.
+# It returns True on every possible census, including one where nothing is uncensored. It said "by
+# arithmetic" and performed none. That is the same defect as the `check(..., True, True)` it
+# replaced — written longer, three lines under a comment confessing the first one.
+#
+# AND THE ARITHMETIC IT GESTURED AT WAS FOR THE WRONG FORMULA. LIMITS said collapse = (b-l)/b. The
+# published figures are (b-l)/(b-e), normalised by the ENDPOINT e = step0375's mean: (b-l)/b gives
+# 79.8% where the document reports 95.5%. Under the real formula
+#     d/db [ (b-l)/(b-e) ] = (l-e)/(b-e)^2
+# so depressing b understates the collapse only when l > e. For step0375, l IS e: the ratio is
+# identically 1 whatever b does, and listing it as covered was vacuous, not merely unproved.
+#
+# So the gate now computes the derivative's sign from the staged means, and the surviving claim is
+# ONE cell: step0008 — uncensored AND l > e. That is the headline comparison and nothing else.
+E_CELL = "step0375"
+e_mean = cens["cells"][E_CELL]["mean_chars"]
+b_mean = cens["cells"]["step0000"]["mean_chars"]
+
+def _bound_holds(cell):
+    """Lower bound requires (i) the comparison cell is uncensored and (ii) l > e."""
+    c = cens["cells"][cell]
+    return c["at_cap"] == 0 and c["mean_chars"] > e_mean
+
+covered = sorted(k for k in cens["cells"] if k != "step0000" and _bound_holds(k))
+vacuous = sorted(k for k in cens["cells"]
+                 if k != "step0000" and cens["cells"][k]["at_cap"] == 0
+                 and cens["cells"][k]["mean_chars"] == e_mean)
+
+check("comparison cells with ZERO capped answers", uncensored, predicate=lambda ks: len(ks) >= 1)
+check("  of those, cells where l > e so the derivative is positive", covered,
+      predicate=lambda ks: len(ks) >= 1)
+for k in sorted(cens["cells"]):
+    if k == "step0000":
+        continue
+    c = cens["cells"][k]
+    print(f"        {k}: at_cap {c['at_cap']:>2}  mean {c['mean_chars']:>7}  "
+          f"l-e {c['mean_chars'] - e_mean:>7.1f}  -> "
+          f"{'LOWER BOUND' if k in covered else ('vacuous (l=e)' if k in vacuous else 'not claimed')}")
+# `vacuous` and `covered` are built from `> e` and `== e`, so disjointness is true on every possible
+# census — a third tautology in the section whose comments already confess two. What is not
+# tautological, and is the thing worth asserting, is that the vacuous set is exactly the cells where
+# the derivative is zero, computed independently of how the sets were built.
+check("  cells where the ratio is identically 1 (claim vacuous, NOT covered)", vacuous,
+      predicate=lambda ks: ks == sorted(k for k in cens["cells"]
+                                        if k != "step0000"
+                                        and abs(cens["cells"][k]["mean_chars"] - e_mean) < 1e-9
+                                        and cens["cells"][k]["at_cap"] == 0))
+check("comparison cells themselves censored (lower bound NOT claimed)", censored_later,
+      predicate=lambda _: True)
+# A PHRASE-GREP CANNOT SETTLE THIS, and this is the fourth time that lesson has arrived in this
+# artifact. The gate here used to assert the string "every forward collapse" appears nowhere — and
+# it fired on LIMITS.md QUOTING the retracted claim in order to withdraw it. Same use/mention trap
+# as the citation sweep, the path gate and the self-referential leak check. A document that retracts
+# a sentence must contain that sentence. So the check is structural instead: the two populations
+# must be non-empty and disjoint, which is the content the prose is obliged to reflect.
+check("  the two populations are separated, not pooled",
+      f"exact:{uncensored} unresolved:{censored_later}",
+      predicate=lambda _: bool(uncensored) and bool(censored_later)
+      and not set(uncensored) & set(censored_later))
+check("censoring instrument returns a null where it should",
+      f"{len(uncensored)} of {len(cens['cells']) - 1} later cells read 0",
+      predicate=lambda _: len(uncensored) > 0)
+
+
+# ══ 6 · PROSE THAT CAN DRIFT, ASSERTED AGAINST REALITY ═══════════════════════════════════
+section("6 · documentation cannot rot")
+
+readme = (HERE / "README.md").read_text()
+limits = (HERE / "LIMITS.md").read_text()
+
+for doc, name in ((readme, "README.md"), (limits, "LIMITS.md")):
+    # [a-z0-9_]+, not [a-z_]+ — the old class could not match the "1" in `s19_at_cap`, so one of
+    # LIMITS.md's four markers was never read at all. A reader set it to 99999 and the run stayed
+    # green, while a separate regex counted 4 markers present, so "4 present" and "3 handled" could
+    # not visibly disagree. The number it guards, s19_at_cap = 2, is the one that killed v1 of the
+    # censoring claim.
+    for claimed in re.findall(r"<!--CHECK:([a-z0-9_]+)=([^>]+)-->", doc):
+        key, val = claimed
+        if key == "theorems":
+            check(f"{name} states {key}", kinds["T"], int(val))
+        elif key == "statements":
+            check(f"{name} states {key}", _L["total"], int(val))
+        elif key == "proofs":
+            check(f"{name} states {key}", count_proofs(arg_txt), int(val))
+        elif key == "evidence_files":
+            check(f"{name} states {key}", len(MAN["evidence"]), int(val))
+        elif key == "lean_theorems":
+            check(f"{name} states {key}", count_lean_theorems(HERE / "lean"), int(val))
+        elif key == "cap":
+            check(f"{name} states {key}", cens["cap"], int(val))
+        elif key == "base_at_cap":
+            check(f"{name} states {key}", cens["cells"]["step0000"]["at_cap"], int(val))
+        elif key == "s19_at_cap":
+            check(f"{name} states {key}", cens["cells"]["step0019"]["at_cap"], int(val))
+        elif key == "ladder_cells":
+            check(f"{name} states {key}", len(cens["cells"]), int(val))
+        else:
+            # AN UNKNOWN MARKER MUST FAIL, NOT BE IGNORED. README claimed every number in LIMITS.md
+            # was re-derived while LIMITS.md carried no markers at all — so the loop body never ran
+            # and the claim was vacuously "true". A marker nobody handles is the same hole one step
+            # later, so it is an error rather than a no-op.
+            check(f"{name} marker '{key}' has a handler", False, True)
+
+# The needle is assembled at runtime so this file does not contain it. The first version searched
+# for a literal and flagged itself — the same use/mention confusion that makes a citation sweep
+# report a document's own discussion of a retracted claim. Exempting the file by name would have
+# hidden a real bug behind a special case.
+NEEDLE = "/" + "home" + "/"
+EVIDENCE_DIR = HERE / "data" / "scripts"   # the audited source: verbatim, paths and all, by design
+# EVERY TEXT FILE THIS ARTIFACT AUTHORS, not just *.py. The first version globbed Python only; a
+# reader planted the author path into README.md, a markdown cell of PROOF.ipynb and Clamp.lean and
+# the gate stayed green. Worse, the pristine artifact ALREADY shipped it — twice in PROOF.ipynb's
+# notebook metadata and three times in MANIFEST.json — so the gate was green over a live leak.
+AUTHORED_SUFFIX = (".py", ".md", ".ipynb", ".lean", ".json", ".txt")
+leaks = []
+for p in sorted(HERE.rglob("*")):
+    if not p.is_file() or p.suffix not in AUTHORED_SUFFIX:
+        continue
+    if EVIDENCE_DIR in p.parents:            # the audited source keeps its paths, by design
+        continue
+    if p.name == "MANIFEST.json":            # provenance: it RECORDS the source paths on purpose
+        continue
+    # A BUILD WRITES `<stem>.LOCAL.ipynb` AND NOTHING ELSE. The exemption used to be `".LOCAL." in
+    # name`, so a file called NOTES.LOCAL.md was exempt from the path gate — and `.gitignore` only
+    # covers `*.LOCAL.ipynb`, so it would have SHIPPED as well as being unchecked. Every exemption
+    # in this file is an attack surface; this one I found by attacking it.
+    if p.name.endswith(".LOCAL.ipynb"):
+        continue
+    if p.suffix == ".ipynb":
+        # A NOTEBOOK'S STORED OUTPUT LEGITIMATELY QUOTES THE EVIDENCE, and the audited scripts carry
+        # the author's paths by design. Cell 46 of PROOF.ipynb prints a line of fit_operator.py that
+        # contains one. Flagging that would push toward sanitising the quotation, which is the thing
+        # this artifact refuses to do. So notebooks are checked on what they AUTHOR — cell source
+        # and metadata — and not on what they REPRODUCE.
+        nb_json = json.loads(p.read_text())
+        authored = json.dumps(nb_json.get("metadata", {})) + "".join(
+            "".join(c["source"]) for c in nb_json["cells"])
+        if NEEDLE in authored:
+            leaks.append(str(p.relative_to(HERE)))
+        continue
+    if NEEDLE in p.read_text(errors="ignore"):
+        leaks.append(str(p.relative_to(HERE)))
+# BARE PROSE NUMBERS ROT TOO, and the sentence claiming otherwise was false. The marker mechanism
+# only re-derives numbers wearing a <!--CHECK:--> tag; a reader found three unmarked ones that had
+# drifted — "34 proofs" three lines under a marker reading 41 (I bumped the marker and not the
+# prose), "exactly three ways" over a four-row table, and a runtime that had been edited AWAY from
+# the truth. So the quantities known to drift are now matched wherever they appear, tag or no tag.
+DERIVED = {
+    r"(\d+)\s+proofs": count_proofs(arg_txt),
+    r"(\d+)\s+labelled statements": _L["total"],
+    r"(\d+)\s+theorems about": kinds["T"],
+}
+prose_bad, quoted_mentions = [], []
+for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
+    text = (HERE / doc).read_text()
+    for pat, truth in DERIVED.items():
+        for m in re.finditer(pat, text):
+            # QUOTED IS MENTION. A document that records its own retractions is OBLIGED to contain
+            # the wrong number — FINDINGS.md's row reads **"34 proofs" was 41**, and flagging that
+            # would push toward deleting the retraction to satisfy the gate. Sixth time in this
+            # artifact that a textual check has needed this distinction; it is not incidental, it
+            # is what happens when a document is required to quote what it withdraws.
+            # NO EXEMPTION IN THE README. The quoted-span exemption exists because FINDINGS.md and
+            # LIMITS.md are OBLIGED to quote the numbers they retract. The README is not: it makes
+            # claims. I attacked my own exemption by putting `"999 labelled statements"` in the
+            # README and the gate stayed green — a false headline number, in quotes, invisible.
+            # So the exemption is scoped to the two documents that record history, and there it is
+            # PRINTED rather than skipped silently, because an unreported exemption is a blind spot
+            # that nobody can audit.
+            quoted = m.start() > 0 and text[m.start() - 1] in '"\u201c'
+            if quoted and doc in ("FINDINGS.md", "LIMITS.md"):
+                quoted_mentions.append(f"{doc}: {m.group(0).strip()} (quoted — a recorded retraction)")
+                continue
+            if int(m.group(1)) != truth:
+                prose_bad.append(f"{doc}: '{m.group(0).strip()}' but derived {truth}")
+check("bare prose numbers match the derived values", prose_bad, predicate=lambda b: b == [])
+for q in quoted_mentions:
+    print(f"        exempt: {q}")
+for b in prose_bad[:5]:
+    print(f"        {b}")
+
+check("no authored file leaks an absolute author path", leaks, predicate=lambda lst: lst == [])
+
+# README says "every number in this file and in LIMITS.md is re-derived". That sentence was false
+# for LIMITS.md, which had zero markers — a promise checked by a loop with nothing to iterate over.
+for doc in ("README.md", "LIMITS.md"):
+    n_markers = len(re.findall(r"<!--CHECK:", (HERE / doc).read_text()))
+    check(f"{doc} carries re-derived numbers", n_markers, predicate=lambda n: n >= 4)
+
+# The evidence directory is expected to contain them, and that expectation is asserted rather than
+# assumed — if it ever came back empty, the scripts would have been silently sanitised.
+kept = [p.name for p in sorted(EVIDENCE_DIR.glob("*.py")) if NEEDLE in p.read_text(errors="ignore")]
+check("audited source kept verbatim (paths intact = not sanitised)", len(kept),
+      predicate=lambda n: n > 0)
+
+
+# ══ VERDICT ══════════════════════════════════════════════════════════════════════════════
+# CLEAN UP THE SCRATCH THIS RUN CREATED. Sections 3 and 3b write <stem>.LOCAL.ipynb to compare
+# against; leaving them behind meant a stranger's `ls` showed FOUR notebooks with no signal which to
+# open, and two blind lenses raised it independently. A published tree must not accumulate the
+# residue of having been checked.
+for _scratch in HERE.glob("*.LOCAL.ipynb"):
+    _scratch.unlink(missing_ok=True)
+
+print(f"\n{'=' * 78}")
+if UNVERIFIED:
+    print(f"{len(UNVERIFIED)} check(s) UNVERIFIED — this environment could not run them:")
+    for u in UNVERIFIED:
+        print(f"   ? {u}")
+    print("  UNVERIFIED is not a pass. The check was unfit here; it did not succeed.\n")
+if FAIL:
+    print(f"{len(FAIL)} of {N} checks FAILED:")
+    for f in FAIL:
+        print(f"   · {f}")
+    sys.exit(1)
+print(f"all {N} checks passed — every number above was recomputed, none was quoted")
+print("\nWhat this does NOT establish: that the arguments are correct. It establishes that the")
+print("evidence is intact, the counts are real, the build is reproducible, the assertions can")
+print("fail, and the prose matches the object. Correctness is what ARGUMENT.ipynb is for, and it")
+print("is checked by reading — see LIMITS.md for what reading will not settle either.")
