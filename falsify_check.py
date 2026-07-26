@@ -747,8 +747,14 @@ def _(tmp):
     # nowhere in the named file — the cheapest possible form of a self-service registry.
     target = HERE / "retracted_numbers.txt"
     with Planted(target), Planted(HERE / "MANIFEST.json"):
+        # ⚠ THREE FIELDS, BECAUSE THE PARSER REQUIRES THREE AND THIS PLANT USED TO CARRY TWO.
+        # The loader keeps a line only if `ln.split("#")[0].count("|") >= 2`. The original plant
+        # wrote one `|`, so the row was discarded before the registry the gate reads was built —
+        # the gate was never asked, and the harness credited it anyway because the git anchor was
+        # failing for an unrelated reason. Found by running the whole suite in a non-git copy.
         target.write_text(target.read_text().rstrip("\n") +
-                          "\nLIMITS.md   | 4242 proofs            # planted, quoted nowhere\n")
+                          "\nLIMITS.md   | 4242 proofs            | 0000000000000000"
+                          "   # planted, quoted nowhere\n")
         subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
         return run_check()
 
@@ -1058,8 +1064,15 @@ def main() -> int:
     # defect class for exactly that, and its own harness was committing it. Exit 1 with only the
     # anchor failing is a restored artifact in an author's dirty tree; exit 1 with anything else is
     # a surviving plant. Those are different facts and they must not print the same sentence.
-    _how = ("clean" if rc == 0 else
-            "restored, and the only failure is the git anchor — the tree was already dirty"
+    # ⚠ AND THIS LINE WAS WRONG IN THE ENVIRONMENT THAT MATTERS MOST. It was written to stop
+    # `green again: True (exit 1)` reading as a contradiction, and it did that by asserting the
+    # failure was the git anchor — in a NON-GIT copy, where there is no anchor and exit 2 means
+    # something was UNVERIFIED, it asserted a cause that cannot exist. A repair for a misleading
+    # summary that is itself misleading one environment over: the fix is where the new hole is.
+    _how = ("clean" if rc == 0
+            else "some gate reported UNVERIFIED — this run could not answer, it did not fail"
+            if rc == 2
+            else "restored; the only failure is the git anchor, so the tree was already dirty"
             if ok else "NOT RESTORED")
     print(f"artifact restored and check.py green again: {ok} (exit {rc}, {_how})")
     for l in post:

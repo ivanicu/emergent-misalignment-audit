@@ -4,7 +4,16 @@ Every number below was measured in this session. Nothing is quoted from notes or
 
 > **⚠ READ THE TENSE. This section is a snapshot, not a status.** All ten defects below are written
 > in the present — *"the build is not reproducible"*, *"the artifact is not self-contained"* — and
-> **every one of them was repaired before publication.** A lens read this section cold and reported
+> **nine of the ten were repaired before publication, and the tenth ships on purpose.** ⚠ This
+> sentence said *"every one of them"* until a provenance lens checked it: defect 7 is the
+> portfolio-framing absolute path, `career.publication-foundry.all-projects-to-public-artifacts…`,
+> and it is still in `MANIFEST.json` — once — because the manifest's job is to record where this
+> artifact was built from, and deleting it would fabricate a provenance rather than disclose one.
+> `check.py`'s path gate exempts `MANIFEST.json` by filename, and that exemption was **silent**
+> where the other three are printed. So the universal was false, the exemption was unreported, and
+> both were found by a reader rather than by the gate. The path is disclosed here instead: it is
+> the only place in the shipped tree where an author path survives, and it is there so the build
+> can be traced. A lens read this section cold and reported
 > the artifact as currently broken in ten ways, which is a fair reading of the words on the page: a
 > defect list in the present tense with no "now" column says these things are true, and they are not.
 >
