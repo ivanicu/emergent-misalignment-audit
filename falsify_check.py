@@ -540,6 +540,30 @@ def _(tmp):
         return run_check()
 
 
+@case("hide an axiom AND omit its #print axioms line", "Lean environment enumeration")
+def _(tmp):
+    # THE ADVERSARY'S ROUND-3 ATTACK A, and the reason the round-2 repair was not a repair. Case 33
+    # below plants the same axiom WITH its `#print axioms` line and is caught by the output gates.
+    # This one deletes that line, and every gate downstream of a request the source makes goes
+    # quiet: `depends` is empty because nothing printed, and reported == asked because both sides
+    # lost the same entry. Only the environment enumeration — which asks Lean itself what this
+    # module declared — still sees it.
+    target = HERE / "lean/Clamp.lean"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        s = must_replace(target.read_text(), "end PersonaForensics", '''def commentOpen : String := "/-"
+
+axiom reviewer_agreement : (16:Nat) = 15
+
+theorem clamp_proves_sixteen_x : (16:Nat) = 15 := reviewer_agreement
+
+def commentClose : String := "-/"
+
+end PersonaForensics''', 1)
+        target.write_text(s)
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check(slow=True)
+
+
 @case("hide an axiom from the scanner inside a string literal", "Lean's own axiom report")
 def _(tmp):
     # THE ADVERSARY'S EXPLOIT ①, VERBATIM. `"/-"` opens a block comment for check.py's regex and is

@@ -84,7 +84,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 83    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 85    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -515,10 +515,10 @@ section("3c · the Lean claim, at its real strength")
 import shutil, tempfile
 LEAN = None if SKIP_SLOW else shutil.which("lean")
 if SKIP_SLOW:
-    UNVERIFIED.append("Lean theorems (CHECK_SKIP_SLOW=1) — 25 check(s) not run"); SUPPRESSED.append(25)
+    UNVERIFIED.append("Lean theorems (CHECK_SKIP_SLOW=1) — 27 check(s) not run"); SUPPRESSED.append(27)
     print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} SKIPPED (CHECK_SKIP_SLOW=1)")
 elif not LEAN:
-    UNVERIFIED.append("Lean theorems (no `lean` on PATH) — 25 check(s) not run"); SUPPRESSED.append(25)
+    UNVERIFIED.append("Lean theorems (no `lean` on PATH) — 27 check(s) not run"); SUPPRESSED.append(27)
     print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} UNVERIFIED — no lean binary")
 else:
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lean-check-"))
@@ -624,13 +624,70 @@ else:
         # declaration from the regex does not hide it from Lean, and the more thoroughly it is
         # hidden the louder the second check gets: an axiom concealed from `src_lean` still prints,
         # so Lean reports MORE axiom lines than the source appears to ask for.
+        #
+        # ⚠ THE SENTENCE DIRECTLY ABOVE IS FALSE, AND AN ADVERSARY PROVED IT WITH ONE DELETION.
+        # Lean emits an axiom report ONLY WHEN ASKED. Omit the `#print axioms` line along with the
+        # axiom, and both gates below stay green: `depends` is empty because nothing printed, and
+        # reported == asked because BOTH sides lost the same entry. Verified from the object — a
+        # two-line file declaring `axiom sneaky : (16:Nat) = 15` and proving a theorem from it, with
+        # no `#print`, produces EMPTY output and exit 0.
+        #
+        # So the repair that moved this section off the comment-stripping regex and onto "the
+        # compiler's output" did not remove the paraphrase — it moved it from the regex's opinion of
+        # the file to THE ATTACKER'S CHOICE OF WHAT TO PRINT. Both are representations the audited
+        # party writes. The comment is kept rather than deleted because the reasoning it records is
+        # the exact shape of the mistake: I checked that the instrument was authoritative and not
+        # that the QUESTION was mine to ask.
         depends = re.findall(r"'(\S+)' depends on axioms: \[([^\]]*)\]", out_f)
-        check(f"  {lf.name}: Lean itself reports NO theorem depending on an axiom",
+        check(f"  {lf.name}: every #print axioms the source DOES ask reports axiom-free",
               [f"{n} -> [{a}]" for n, a in depends], predicate=lambda d: d == [])
         reported = len(depends) + out_f.count("does not depend on any axioms")
         check(f"  {lf.name}: Lean printed exactly the axiom reports the source asks for",
               f"printed {reported}, source asks {len(asked)}",
               predicate=lambda s, a=len(asked), r=reported: r == a)
+
+        # ── ASK LEAN'S ENVIRONMENT, NOT THE SOURCE ──────────────────────────────────────
+        # The gate that cannot be defeated by omission: compile the file with an appended
+        # metaprogram that walks `env.constants.map₂` — every constant THIS MODULE declared — and
+        # calls `collectAxioms` on each. The audited file never asks for anything; the audit asks.
+        # Deleting the `#print` line no longer hides a declaration, because the enumeration comes
+        # from the elaborator's own environment after it has processed the whole file.
+        #
+        # On the adversary's exact exploit this prints, where all eight earlier assertions passed:
+        #     AXIOMDEP PersonaForensics.reviewer_agreement :: [PersonaForensics.reviewer_agreement]
+        #     AXIOMDEP PersonaForensics.clamp_proves_sixteen_x :: [PersonaForensics.reviewer_agreement]
+        #
+        # THE THREE ALLOWED NAMES ARE LEAN'S FOUNDATIONS, not an exemption I chose for convenience:
+        # `propext`, `Classical.choice`, `Quot.sound` are the axioms Lean's own kernel is built on,
+        # and `#print axioms` reports "does not depend on any axioms" only for terms free even of
+        # those. Resolution.lean legitimately contains one — the compiler-generated
+        # `Interp.Measured.mk.injEq` uses `propext`, because structure injectivity does. Anything
+        # OUTSIDE the three is a declared axiom, which is the thing being hunted.
+        #
+        # COST, measured: 0.56 s and ~1.4 GB RSS per file, because `import Lean` loads the whole
+        # library. That is the price of asking the elaborator instead of a regex, and it is stated
+        # here because an operator on a small container needs to know before the OOM.
+        _snip = ("\n\nopen Lean Elab Command in\nrun_cmd do\n"
+                 "  let env ← getEnv\n"
+                 "  let names := env.constants.map₂.foldl (init := (#[] : Array Name))\n"
+                 "                 (fun acc n _ => if n.isInternal then acc else acc.push n)\n"
+                 "  for n in names do\n"
+                 "    let ax ← liftCoreM <| collectAxioms n\n"
+                 "    if !ax.isEmpty then\n"
+                 "      logInfo m!\"AXIOMDEP {n} :: {ax.toList}\"\n")
+        _adt = pathlib.Path(tempfile.mkdtemp(prefix="lean-axiom-audit-")) / lf.name
+        _adt.write_text("import Lean\n" + lf.read_text() + _snip)
+        _ar = subprocess.run([LEAN, str(_adt)], capture_output=True, text=True, timeout=600)
+        FOUNDATIONAL = {"propext", "Classical.choice", "Quot.sound"}
+        smuggled = []
+        for _n, _axs in re.findall(r"AXIOMDEP (\S+) :: \[([^\]]*)\]", _ar.stdout):
+            _extra = [a.strip() for a in _axs.split(",")
+                      if a.strip() and a.strip() not in FOUNDATIONAL]
+            if _extra:
+                smuggled.append(f"{_n} -> {_extra}")
+        check(f"  {lf.name}: no declaration depends on a NON-foundational axiom "
+              f"(enumerated from Lean's environment, not from the source's requests)",
+              smuggled, predicate=lambda s: s == [])
 
     # Coverage: how many DOCUMENT theorems the Lean actually covers, from the file's own mapping.
     clamp = (HERE / "lean/Clamp.lean").read_text()
