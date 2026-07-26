@@ -7,7 +7,7 @@ to name.**
 
 | line | how many claims it makes | audited here | result | staged evidence |
 |---|---|---|---|---|
-| **persona-forensics kit** | **27** — enumerated, and asserted by the artifact itself (`PROOF.ipynb`, `assert len(claims) == 27`) | **27** | **0 overturned** · 1 downgraded after the fact · 1 sub-claim retracted · 5 strengthened · 1 (`EVIL`, its headline measure) UNVERIFIED | **209 files · 52.4 MB** |
+| **persona-forensics kit** | **27** — enumerated, and asserted by the artifact itself (`PROOF.ipynb`, `assert len(claims) == 27`): 6 tool lemmas with no research code behind them, and **21 claims with real code closure** | **15 of the 21** carry a verdict · 1 partial · **5 unclosed** | **0 overturned** · 3 strengthened · 3 downgraded · 1 sub-claim retracted · 1 (`EVIL`, its headline measure) UNVERIFIED | **209 files · 52.4 MB** |
 | **developmental spectroscopy** | **not known, and not knowable from here.** What is enumerated is its *retraction* index: 21 claims it had already killed | **5** — 3 live claims plus 2 already on that index | 2 retracted · 1 renamed · 1 narrowed · 1 survives | **10 files · 1.6 MB** |
 
 **Three things this table will not let you forget.**
@@ -38,7 +38,7 @@ its claims; using it as a denominator would have implied a coverage of 5/21 that
 python3 check.py     # CPU only · no network · no weights · no credentials
 ```
 
-<!--CHECK:checks_full=88--> checks, exit 0, in a full environment; on a bare standard-library Python
+<!--CHECK:checks_full=90--> checks, exit 0, in a full environment; on a bare standard-library Python
 53 pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. **The three
 numbers in the table above are enforced too** — <!--CHECK:ds_files=10--> and
 <!--CHECK:pf_files=209--> are re-derived from the staged tree by `check.py`, because a page whose
@@ -53,11 +53,22 @@ this audit's own theorem set is not new (`PRIOR_ART.md`, scored 12/100 by a lens
 overturned, five got stronger, one sub-claim was retracted."* It is the only positive result in this
 artifact with an enumerated denominator, and until this revision it appeared on no front page.
 
+**Three corrections to that sentence, none of which I made until a lens forced them.** *(1)* **27 is
+the population, not the coverage.** The kit's own stored output reads `DECOMPOSED WITH VERDICTS (✓)
+: 15 of 21`, and the line under it says *"That last number is the honest state of this audit, and
+the only one that should move."* I had put 27 in the *audited* column of a table whose opening
+sentence declares that a verdict without a denominator is the defect this artifact exists to name.
+*(2)* **"five got stronger" is prose; the machine tally beside it says `strengthened=3`.** Same
+output block, consecutive lines, and I propagated the typed number. *(3)* **The movement ledger is
+§12.2, not §14.2** — §14.2 is claim 15's downgrade. Three downgrades, not one: claims 22 and 23 in
+audit, claim 15 after.
+
 **It is also already out of date in one row, and shipping it without that would make it stale on
 arrival.** `PROOF.ipynb` §14.2 downgrades **claim 15 from CONFIRMED to UNVERIFIED** — "not acquitted
 and not refuted" — after the summary above was written, and refutes the stated *reason* for claim 8.
-So the honest form is **0 of 27 overturned, 1 downgraded after the fact, 1 sub-claim retracted, 5
-strengthened**, and the ledger in `PROOF.ipynb` §14.2 is the authority, not the sentence in §12.5.
+So the honest form is **0 of 21 code-closed claims overturned, 15 of them carrying a verdict at all,
+3 strengthened, 3 downgraded, 1 sub-claim retracted, 5 still unclosed** — and `PROOF.ipynb` §12.2 is
+the authority, not the summary sentence in §12.5 and not this paragraph.
 
 ## The developmental-spectroscopy rows: what was claimed, and what survived
 
@@ -77,7 +88,17 @@ One is an unresolvable absence. And two figures that appear in the argument (the
 differential and the 8.15–11.20 pp effects it is small relative to) are **typed prose** — the corpus
 behind them is not staged. `LIMITS.md` and `MANIFEST.json` name each.
 
-> **⚠ What this table said before a statistician recomputed it** — the withdrawn $z$-scores, the DEFF 7.29 / effective-$n$ 25 recomputation, and the withdrawal of "replicated" — is in `LIMITS.md` §3c, in full. It used to be repeated here, which made three copies of one correction on the page that measures that defect.
+> **⚠ What this table said before a statistician recomputed it.** The first row read *"replicated
+> across a 14× parameter gap: 7B length $z=-6.31$ … 0.5B $z=-10.84$ while code $z=-0.23$"*. Three
+> things were wrong. The $z$ was computed over 184 rollouts that are 8-deep clusters inside 23
+> questions — ICC 0.90, DEFF 7.29, **effective n = 25** — and it is numerically right only because
+> ignoring the clustering inflates and ignoring the pairing deflates, cancelling to within 1%. The
+> artifact's own **T10** ($\text{DEFF}=1+(m-1)\rho$) sits one file away and had been applied to a
+> claim it *killed*, never to the one it keeps. The sentence also compared a $z$ against a raw count
+> — two estimands. And **"replicated" is withdrawn**: the 0.5B leg has no staged data at any
+> checkpoint but the baseline, whose four "seeds" are one file copied four times. See `LIMITS.md`.
+>
+> *This block was briefly DELETED and replaced with a pointer reading "is in `LIMITS.md` §3c, in full". It was not in §3c and never had been — §3c is about the round-4 magnitude finding, and `7.29`, `DEFF`, `effective` and `replicated` appear nowhere in `LIMITS.md` at all. I removed a correction and left a signpost to it, which is worse than the duplication I was removing: the earlier version said the same thing three times, and the repair said it zero. Restored verbatim.*
 
 ## Why it took twenty-six theorems — and whose they are
 

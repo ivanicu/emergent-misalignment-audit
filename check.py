@@ -38,8 +38,9 @@ MARKER = r"<!--CHECK:([a-z0-9_]+)=([^>]+)-->"
 # why this is a registry and not a pattern.
 _REGFILE = HERE / "retracted_numbers.txt"
 REGISTERED_NUMBERS = {
-    ln.split("#")[0].strip() for ln in (_REGFILE.read_text().splitlines() if _REGFILE.exists() else [])
-    if ln.split("#")[0].strip()
+    "|".join(part.strip() for part in ln.split("#")[0].split("|"))
+    for ln in (_REGFILE.read_text().splitlines() if _REGFILE.exists() else [])
+    if "|" in ln.split("#")[0]
 }   # ONE definition: parser and counter share it
 
 # A FULL RUN EXECUTES BOTH NOTEBOOKS AND THE LEAN, WHICH TAKES MINUTES. `falsify_check.py` runs this
@@ -91,7 +92,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 88    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 90    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -128,14 +129,24 @@ def section(title: str) -> None:
 section("1 · evidence integrity")
 
 MAN = json.loads((HERE / "MANIFEST.json").read_text())
+# COUNT WHAT WAS ACTUALLY HASHED. An adversary changed this loop's iterable to
+# `list(MAN["evidence"].items())[:0]`, leaving the check() call, its label and its "333 files"
+# payload intact — so the gate printed `ok every manifest file present and unmodified  333 files`
+# while hashing nothing, and the gate-accounting guard could not see it because that guard asks HOW
+# MANY gates ran, never WHICH. The payload was a number typed next to a loop, not a number the loop
+# produced. Now the loop reports its own trip count and the predicate compares it to the manifest.
 bad = []
+_hashed = 0
 for rel, rec in MAN["evidence"].items():
+    _hashed += 1
     p = HERE / rel
     if not p.exists():
         bad.append(f"{rel} MISSING")
     elif hashlib.sha256(p.read_bytes()).hexdigest() != rec["sha256"]:
         bad.append(f"{rel} MODIFIED")
-check("every manifest file present and unmodified", f"{len(MAN['evidence'])} files", predicate=lambda _: not bad)
+check("every manifest file present and unmodified",
+      f"{_hashed} of {len(MAN['evidence'])} files hashed",
+      predicate=lambda _: not bad and _hashed == len(MAN["evidence"]) and _hashed > 0)
 for b in bad[:5]:
     print(f"        {b}")
 
@@ -159,12 +170,21 @@ else:
     # the gate reporting `[]` with every machine-checked proof outside version control. Nothing
     # counted what the anchor covers. So the SIZE of the covered set is now asserted against the
     # manifest — a shrinking anchor is a failing anchor, not a silent one.
+    # A `>=` ON COUNTS CONSTRAINS A CARDINALITY, NOT A SET, and an adversary proved the difference:
+    # `.gitignore` gained `data/`, `git update-index --force-remove` dropped all 219 staged files,
+    # and 240 zero-byte files under a directory `seal.py` does not hash bought back the count.
+    # Result: `355 tracked vs 333 hashed`, gate green, and EVERY staged rollout, activation, config
+    # and fit outside version control. Padding did not even have to be plausible.
+    #
+    # So the comparison is now between the SETS. Every file the manifest hashes must be tracked;
+    # what else git tracks is not this gate's business.
     _tracked = _sp.run(["git", "-C", str(HERE), "ls-files", "--", "."],
                        capture_output=True, text=True)
-    _n_tracked = len([l for l in _tracked.stdout.splitlines() if l.strip()])
-    check("version control covers at least what the manifest hashes",
-          f"{_n_tracked} tracked vs {len(MAN['evidence'])} hashed",
-          predicate=lambda s, t=_n_tracked, h=len(MAN["evidence"]): t >= h)
+    _tset = {l.strip() for l in _tracked.stdout.splitlines() if l.strip()}
+    _untracked_evidence = sorted(set(MAN["evidence"]) - _tset)
+    check("version control covers every file the manifest hashes (set, not count)",
+          _untracked_evidence[:6] or f"all {len(MAN['evidence'])} hashed files are tracked",
+          predicate=lambda _: _untracked_evidence == [])
     for d in dirty[:6]:
         print(f"        {d}")
 
@@ -685,10 +705,25 @@ else:
         # COST, measured: 0.56 s and ~1.4 GB RSS per file, because `import Lean` loads the whole
         # library. That is the price of asking the elaborator instead of a regex, and it is stated
         # here because an operator on a small container needs to know before the OOM.
+        # A SENTINEL, BECAUSE A SILENT INSTRUMENT AND A CLEAN FILE LOOK IDENTICAL.
+        # The first version of this gate read "no AXIOMDEP lines" as "no smuggled axioms". An
+        # adversary put `#exit` between the axiom and the appended metaprogram: Lean stops
+        # elaborating there, the audit never runs, the compiler exits 0, stdout carries no
+        # AXIOMDEP line — and the gate reported clean on a file containing
+        # `theorem clamp_proves_sixteen_x : (16:Nat) = 15 := reviewer_agreement`.
+        # Reproduced independently: a four-line probe with `#exit` gives lean exit 0 and zero
+        # AXIOMDEP lines.
+        #
+        # This is the positive-control law, and I wrote the gate that breaks it. A measured ZERO is
+        # inadmissible until the same instrument has demonstrated it can return non-zero IN THIS RUN.
+        # So the metaprogram now announces itself and reports how many constants it walked; if that
+        # line is missing the gate FAILS, because the only two explanations are that the audit was
+        # prevented from running or that the file declares nothing at all, and neither is a pass.
         _snip = ("\n\nopen Lean Elab Command in\nrun_cmd do\n"
                  "  let env ← getEnv\n"
                  "  let names := env.constants.map₂.foldl (init := (#[] : Array Name))\n"
                  "                 (fun acc n _ => if n.isInternal then acc else acc.push n)\n"
+                 "  logInfo m!\"AXIOMAUDIT-RAN {names.size}\"\n"
                  "  for n in names do\n"
                  "    let ax ← liftCoreM <| collectAxioms n\n"
                  "    if !ax.isEmpty then\n"
@@ -703,6 +738,11 @@ else:
                       if a.strip() and a.strip() not in FOUNDATIONAL]
             if _extra:
                 smuggled.append(f"{_n} -> {_extra}")
+        _ran = re.search(r"AXIOMAUDIT-RAN (\d+)", _ar.stdout)
+        check(f"  {lf.name}: the axiom audit actually RAN (positive control — `#exit` defeats it "
+              f"silently otherwise)",
+              f"walked {_ran.group(1)} constants" if _ran else "NO SENTINEL — audit never executed",
+              predicate=lambda s, r=_ran: bool(r) and int(r.group(1)) > 0)
         check(f"  {lf.name}: no declaration depends on a NON-foundational axiom "
               f"(enumerated from Lean's environment, not from the source's requests)",
               smuggled, predicate=lambda s: s == [])
@@ -1098,9 +1138,9 @@ for p in sorted(HERE.rglob("*")):
 # prose), "exactly three ways" over a four-row table, and a runtime that had been edited AWAY from
 # the truth. So the quantities known to drift are now matched wherever they appear, tag or no tag.
 DERIVED = {
-    r"(\d+)\s+proofs": count_proofs(arg_txt),
-    r"(\d+)\s+labelled statements": _L["total"],
-    r"(\d+)\s+theorems about": kinds["T"],
+    r"(\d+)[\s*_`]+proofs": count_proofs(arg_txt),
+    r"(\d+)[\s*_`]+labelled statements": _L["total"],
+    r"(\d+)[\s*_`]+theorems about": kinds["T"],
 }
 prose_bad, quoted_mentions = [], []
 for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
@@ -1147,32 +1187,28 @@ for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
             # outcome of tightening, and the answer is to name the second form, not to reword the
             # paragraph until the gate is happy. Editing the evidence to satisfy the instrument is
             # the failure this whole artifact is about.
-            RETRACTS = ("was", "were", "retract", "withdraw", "no longer", "corrected",
-                        "wrong", "is now", "should have", "->")
-            line = text[text.rfind("\n", 0, m.start()) + 1:
-                        (text.find("\n", m.end()) + 1 or len(text))]
+            # REGISTERED PER DOCUMENT, because a number is not a claim. v3 keyed the exemption on
+            # the NUMBER alone, so `999 labelled statements` — registered as a planted self-attack
+            # recorded in LIMITS.md — also exempted a sentence appended to FINDINGS.md reading
+            # "Independent replication confirms ...", and the run PRINTED that fabrication as a
+            # "registered retraction". The same lens also found that `RETRACTS` and the `line`
+            # slice below were computed and never read: dead code left behind by v2, which made the
+            # exemption one condition wide while the comment described two.
+            #
+            # Registration now names the file. Moving a registered quotation to another document
+            # loses the exemption, which is what "this document is obliged to contain this wrong
+            # number" actually means.
             quoted = m.start() > 0 and text[m.start() - 1] in '"\u201c'
             if quoted and doc in ("FINDINGS.md", "LIMITS.md"):
-                # ENUMERATION, NOT PATTERN — the third and last form of this exemption.
-                # v1 was "preceded by a quote character". v2 added "retraction language on the line
-                # OR a markdown table row". An adversary beat v2 with one line of markdown: a
-                # fabricated table row needs three pipes and no retraction verb, and the word
-                # "corrected" inside a present-tense assertion satisfies the other branch. The
-                # control — the SAME SENTENCE wrapped across two lines — failed. A line break was
-                # the only thing separating a pass from a failure, which is the clearest possible
-                # demonstration that the test was measuring format and not meaning.
-                #
-                # Format is chosen by whoever writes the sentence; REGISTRATION IS NOT. A quoted
-                # number must now appear in `retracted_numbers.txt` — the same move closure.py made
-                # when its blockquote exemption became a hiding place. Adding a line there is a diff
-                # a reviewer can object to; matching a shape is not.
-                _val = f"{m.group(1)} {pat.split(chr(92))[0].strip('()d+s ')}".strip()
-                _key = re.sub(r"\s+", " ", f"{m.group(1)} {m.group(0).split(m.group(1),1)[1]}").strip()
-                why = "registered retraction" if _key in REGISTERED_NUMBERS else None
+                _num = re.sub(r"\s+", " ",
+                              f"{m.group(1)} {m.group(0).split(m.group(1), 1)[1]}").strip()
+                _key = f"{doc}|{_num}"
+                why = "registered for this file" if _key in REGISTERED_NUMBERS else None
                 if why is None:
                     prose_bad.append(
-                        f"{doc}: '{m.group(0).strip()}' is quoted but its line retracts nothing "
-                        f"- a quotation mark is not a mention")
+                        f"{doc}: '{m.group(0).strip()}' is quoted but is not registered for "
+                        f"THIS file in retracted_numbers.txt — a quotation mark is not a mention, "
+                        f"and a number registered elsewhere is not registered here")
                     continue
                 quoted_mentions.append(f"{doc}: {m.group(0).strip()} (quoted; {why})")
                 continue
@@ -1292,5 +1328,6 @@ if UNVERIFIED:
     sys.exit(2)
 print("\nWhat this does NOT establish: that the arguments are correct. It establishes that the")
 print("evidence is intact, the counts are real, the build is reproducible, the assertions can")
-print("fail, and the prose matches the object. Correctness is what ARGUMENT.ipynb is for, and it")
+print("fail, and the TWELVE MARKED NUMBERS match the object — not the prose, which is ~123 numeric")
+print("literals kept true by hand. Correctness is what ARGUMENT.ipynb is for, and it")
 print("is checked by reading — see LIMITS.md for what reading will not settle either.")

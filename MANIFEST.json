@@ -80,12 +80,12 @@
       "sha256": "0fccc4ef3ea79fecf75b9f8e44ab3f02f081eba05c355eb5684b97b0a9c541d9"
     },
     "README.md": {
-      "bytes": 15764,
-      "sha256": "fa72d0d1a3c548024742bc5882a7e4c9f32f1e40aa1ac252926bd3e2438f40f5"
+      "bytes": 17844,
+      "sha256": "1895f5a0753bba07efa5fadbe9d93b5ef91ced2e67d8a3fb4779e8a5dc5902f2"
     },
     "THIRD_PARTY.md": {
       "bytes": 5182,
-      "sha256": "462cb6bd8fd97be811c128d99e065f5b211f5d3661c243b696a0f838311001fb"
+      "sha256": "500af16c7d18ab8f00bbd3306923e4d1a98eaafc0f23d9423562c0e6ddebd35f"
     },
     "artifact_io.py": {
       "bytes": 10294,
@@ -100,8 +100,8 @@
       "sha256": "32eadc409e66eddc30a5b4fdd827bf7a8b38ddbb0b58d44863b5033294ee529d"
     },
     "check.py": {
-      "bytes": 83735,
-      "sha256": "2395a7a3dec3017b93330bdc7c350c3bb8f1410d3fc61750b243e3c1081ded00"
+      "bytes": 86464,
+      "sha256": "3ca3cfcda50050ed9add999945dc65003958e037f37bbbda1927348533314f81"
     },
     "closure.py": {
       "bytes": 13569,
@@ -1360,8 +1360,8 @@
       "sha256": "27306b302d66628413c8f8baeb8dcc14dd62477c6bc230771f9126683ddccf23"
     },
     "retracted_numbers.txt": {
-      "bytes": 1226,
-      "sha256": "16a35bb310c1242390a39c683cd87ee2e9d3eb23d61d88cd53990ee15c82a679"
+      "bytes": 1112,
+      "sha256": "d8139d196c022effca3797b722de136c2ebf363ffac84526f080c15a3ed71b37"
     },
     "retractions.txt": {
       "bytes": 762,

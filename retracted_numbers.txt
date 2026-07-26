@@ -1,17 +1,17 @@
-# Numbers this artifact is entitled to QUOTE without asserting.
+# Numbers a NAMED document is entitled to QUOTE without asserting.
 #
-# WHY A REGISTRY AND NOT A PATTERN. The exemption used to be decided by format: a quotation mark,
-# then later "retraction language on the line OR a markdown table row". An adversary defeated both
-# with one line of markdown — a fabricated table row needs three pipes and no retraction verb, and
-# the word "corrected" inside a present-tense assertion satisfies the other branch. LIMITS.md
-# asserting 999 proofs and 512 labelled statements passed with every gate green, while the run
-# printed "none was quoted". The control — the same sentence wrapped across two lines — failed. A
-# LINE BREAK was the only thing separating win from loss.
+# WHY A REGISTRY, AND WHY IT NAMES THE FILE.
+# v1 exempted anything preceded by a quotation mark. v2 added "retraction language on the line OR a
+# markdown table row" — defeated by a fabricated table row, and by a LINE BREAK. v3 required the
+# number to be registered here, and an adversary defeated THAT by moving a registered number to a
+# different document: `999 labelled statements` is registered because LIMITS.md records a planted
+# self-attack, and the same digits appended to FINDINGS.md as "Independent replication confirms ..."
+# inherited the exemption and were PRINTED as a registered retraction.
 #
-# Format is chosen by whoever writes the sentence. Registration is not. Anything quoted and not
-# listed here now FAILS, and adding a line is a diff someone can object to.
+# Registration certifies a number in a place. Format:
 #
-# format:  <number> <unit>   # why this document is obliged to contain it
-34 proofs                    # the retracted count, recorded in FINDINGS.md
-41 proofs                    # the intermediate wrong count (tombstone occurrences, not proofs)
-999 labelled statements      # the author's own planted self-attack, recorded in LIMITS.md
+#     <file> | <number> <unit>        # why that file is obliged to contain it
+#
+LIMITS.md   | 41 proofs               # the intermediate wrong count (tombstone occurrences)
+LIMITS.md   | 999 labelled statements # the author's own planted self-attack, recorded in this file
+FINDINGS.md | 34 proofs               # the retracted count, recorded in this file's defect ledger
