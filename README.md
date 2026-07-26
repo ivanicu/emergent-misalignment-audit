@@ -9,11 +9,19 @@ python3 check.py        # CPU only · no network · no model weights · no crede
 ```
 
 **What you get depends on what you have, and the exit code says which.** On a bare standard-library
-Python: **64 checks pass, 3 report UNVERIFIED, exit 2** — three gates need `numpy`, `torch` or
-`tokenizers` (see `requirements.txt`) and the run refuses to call that a clean pass. With those
-installed: **69 pass, exit 0**. Exit 1 means something actually failed. An earlier version of this
+Python: **52 checks pass, 4 report UNVERIFIED, exit 2** — four gates need `numpy`, `tokenizers` or a
+`lean` binary (see `requirements.txt`) and the run refuses to call that a clean pass. With those
+installed: **83 pass, exit 0**. Exit 1 means something actually failed. An earlier version of this
 line advertised "69 assertions" next to the bare command and exited 0 on a degraded run; a
 reproducer lens caught both.
+
+Both profiles were measured on the commit containing this sentence; neither is remembered. The
+previous version said 64 / 3 / 69 and all three had drifted. **The full-environment count is
+enforced** — <!--CHECK:checks_full=83--> is re-derived by the handle, which fails if this line and
+the file disagree. **The degraded-environment numbers are not, and cannot be**: a run with `numpy`
+present has no way to observe what a run without it would report, so 52 and 4 are a measurement
+recorded here, not an invariant this command can defend. Treat them as documentation and the 83 as
+a check.
 
 ## What the two projects claimed, and what survived
 

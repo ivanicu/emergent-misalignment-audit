@@ -95,10 +95,25 @@ the instrument was right, ran to completion, and was not looked at.
 **Still true, and not repaired:** `verify.py` ships 71 assertions that nothing in this repository
 executes; `falsify.py`'s 23 are the ones that run — and both of those numbers were wrong here
 (73 and 24) until a reader counted the `ast.Assert` nodes, in the sentence headed *still true, and
-not repaired*, inside the file the README promises is drift-checked. And on the environment the README advertises —
-stock `python3`, no Lean — four gates report UNVERIFIED and the process still exits 0. The exit code
-is the only machine-readable verdict and it does not distinguish "checked" from "could not check";
-the printed verdict does. If you are gating anything on this, read the lines, not the status.
+not repaired*, inside the file the README promises is drift-checked. Both were re-counted today by
+`ast` and both hold.
+
+> **⚠ The rest of this paragraph was itself stale, and a lens caught it under this heading.** It
+> read: *"on the environment the README advertises — stock `python3`, no Lean — four gates report
+> UNVERIFIED and the process still exits 0."* The **four** is right and re-measured today. The
+> **exit 0** has been wrong since the three-valued exit code landed: a stock run reports **52
+> passed, 4 UNVERIFIED, exit 2**, and exit 1 is reserved for a real failure. So a sentence claiming
+> the machine-readable verdict cannot distinguish "checked" from "could not check" survived, under a
+> heading promising it was current, for the entire life of the repair that made it false — while the
+> README two files away carried the corrected behaviour. **That is this artifact's own subject
+> happening to this artifact**, in the document whose job is to say what is still wrong, and it is
+> the third instance in this repository of a correction reaching the place it was made and not the
+> sibling that states the same thing.
+>
+> What survives of the original point, and it is the part worth keeping: **the exit code is a
+> summary and the lines are the evidence.** Exit 2 tells you something could not be checked; only
+> the printed `????` lines tell you *what*, and only `LIMITS.md` tells you whether it mattered. If
+> you are gating anything on this, read the lines, not the status.
 
 It does **not** mean the arguments are correct. No assertion in this artifact checks a proof. §9 of
 `PROOF.ipynb` is the standing example inside the work itself — every number there is arithmetically
@@ -106,6 +121,35 @@ correct and the conclusion built on them was still wrong, because the choice of 
 the work. Correct arithmetic on the wrong comparison is the failure mode no assertion catches.
 
 ## 3 · Named defects I could not repair
+
+**`check.py` cannot detect tampering by anyone who can commit. This is a property of the design, not
+a bug in it.** §1 hashes every staged file against `MANIFEST.json` — but `seal.py` writes that
+manifest *from the tree*, so the hash chain is rooted inside the object it authenticates. The anchor
+added to close that loop is `git status --porcelain`, and an adversary lens defeated it two ways in
+one session:
+
+- **`git update-index --skip-worktree <file>`** sets a local index bit, not content. `porcelain`
+  reports clean with the file modified.
+- **Committing the doctored bytes.** `git add -A && git commit -m "routine rebuild"` → clean tree,
+  exit 0. The anchor sees only *uncommitted* edits, so it is blind to the ordinary workflow of
+  anyone who tampers and then commits.
+
+Under that cover the lens shipped a `lean/` file whose axiom was hidden from the scanner, a package
+directory that fabricated every count in §2, and a one-line rewrite of the audited source's own
+statement of purpose — six exploits printing `all 76 checks passed`, exit 0.
+
+**Three of those are now closed by reading the compiler and the import system instead of a regex,
+and the anchor is not.** It is not fixable here, and the reason is worth stating plainly: *version
+control records history; it does not authenticate it.* No check that reads a repository the attacker
+also writes can establish provenance, and a third anchor would be the fourth iteration of defending
+ground the adversary owns. What would actually close it is out-of-band — hashes published somewhere
+this repository cannot reach, or a signature whose key does not live beside the thing it signs.
+
+So the honest statement of what the manifest gives you: **drift detection against accident, not
+integrity against intent.** It catches the author who rebuilds a notebook and forgets to re-derive
+the number in the README — which it did, twice, in the session that widened it from 310 files to
+328. It does not catch a determined party, and it never did; what changed is that the sentence
+saying so is now here rather than absent.
 
 **`EVIL` is an undischarged construct.** The audited kit's headline behavioural measure is
 membership in `{"4","5"}` of a judge's string verdict. The rubric that defines it is selectable at
@@ -165,7 +209,8 @@ halves, including that the bypass still compiles, so the header cannot drift bac
 `0.0000` on a corpus that is 99.6% Ruby code.
 
 > **⚠ I called this miss "arm-uniform" and that was a category error of exactly the kind T26 exists
-> to forbid.** The measured differential is **0.40 pp**, not zero. T26's algebra says the bias *is*
+> to forbid.** The differential is **0.40 pp**, not zero — *reported*, not measured here; the corpus
+behind it is not staged, and `MANIFEST.json` records that under `excluded`. T26's algebra says the bias *is*
 > $f_A-f_B$; converting "small relative to 8.15–11.20 pp effects" into the categorical "uniform, so
 > it cancels" is the slide from a magnitude to a class that the theorem is about. A third reader
 > caught it.

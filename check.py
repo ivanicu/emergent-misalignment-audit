@@ -81,7 +81,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 82    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 83    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -879,6 +879,14 @@ for doc, name in ((readme, "README.md"), (limits, "LIMITS.md")):
             check(f"{name} states {key}", cens["cells"]["step0019"]["at_cap"], int(val))
         elif key == "ladder_cells":
             check(f"{name} states {key}", len(cens["cells"]), int(val))
+        elif key == "checks_full":
+            # CHECKED AGAINST THE DECLARED TOTAL, NOT AGAINST N, because N is not final here — this
+            # loop runs mid-file and the gates below it have not been counted yet. Comparing to a
+            # running total would let the README state whatever N happened to be at this line, which
+            # is a number with no meaning. EXPECTED_TOTAL is in turn asserted against N + suppressed
+            # at the bottom of a complete run, so the chain is: README -> declared -> observed, with
+            # each link checked and no link a memory.
+            check(f"{name} states {key}", EXPECTED_TOTAL, int(val))
         else:
             # AN UNKNOWN MARKER MUST FAIL, NOT BE IGNORED. README claimed every number in LIMITS.md
             # was re-derived while LIMITS.md carried no markers at all — so the loop body never ran
