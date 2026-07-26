@@ -1,15 +1,23 @@
-# An audit of two emergent-misalignment research lines
+# Six claims, audited until they broke
 
-> **What "independent" does and does not mean here — stated first, because the H1 used to assert it
-> and nothing in this repository defined it.** `MANIFEST.json` records `built_from` and both
-> `evidence_sources` as three directories in one private home tree, and this artifact ships the
-> audited project's own frozen pre-registration. **Auditor and audited are the same author.** The
-> independence that exists is procedural, not institutional: every reviewer quoted here ran with no
-> context, no access to my reasoning, and a brief written to attack rather than to confirm; several
-> of them overturned my conclusions and are quoted doing it. That is worth something, and it is not
-> what a reader hears in "an independent audit". A blind lens whose only subject was this document's
-> rhetoric found the word in line 1 and nowhere else in the file, and it was right to. The word is
-> withdrawn from the title and replaced by this paragraph.
+**If you are deciding whether a number from this work is safe to quote, one command settles it —
+and the answer is mostly no.**
+
+One claim survives, narrowed to a single scale, one checkpoint, one training run and one text axis.
+Two are retracted. One renamed. One narrowed to a single cell. One is **UNVERIFIED**: the headline
+behavioural measure, which I could not settle and did not quietly drop.
+
+```bash
+python3 check.py          # ~10 s · CPU only · no network, no weights, no credentials
+```
+
+That command re-derives every marked number on this page from the staged evidence and exits 1 if
+any of them has moved. The six-row verdict table is the section titled *The six audited claims*; if
+you read one thing, read that.
+
+**Auditor and audited are the same person** — the independence here is procedural (cold-context
+reviewers, briefs written to attack), not institutional, and the paragraph below the coverage table
+says exactly what that is and is not worth.
 
 **Two research lines produced claims about emergent misalignment. This audit says what each claim is
 now worth, what it could not settle, and — first — how much of each line it actually reached.
@@ -104,6 +112,17 @@ and not refuted" — after the summary above was written, and refutes the stated
 So the honest form is **0 of 21 code-closed claims overturned, 15 of them carrying a verdict at all,
 3 strengthened, 3 downgraded, 1 sub-claim retracted, 5 still unclosed** — and `PROOF.ipynb` §12.2 is
 the authority, not the summary sentence in §12.5 and not this paragraph.
+
+> **What "independent" does and does not mean here — stated first, because the H1 used to assert it
+> and nothing in this repository defined it.** `MANIFEST.json` records `built_from` and both
+> `evidence_sources` as three directories in one private home tree, and this artifact ships the
+> audited project's own frozen pre-registration. **Auditor and audited are the same author.** The
+> independence that exists is procedural, not institutional: every reviewer quoted here ran with no
+> context, no access to my reasoning, and a brief written to attack rather than to confirm; several
+> of them overturned my conclusions and are quoted doing it. That is worth something, and it is not
+> what a reader hears in "an independent audit". A blind lens whose only subject was this document's
+> rhetoric found the word in line 1 and nowhere else in the file, and it was right to. The word is
+> withdrawn from the title and replaced by this paragraph.
 
 ## The six audited claims — five from developmental spectroscopy, plus `EVIL`
 
