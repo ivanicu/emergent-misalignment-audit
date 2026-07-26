@@ -28,7 +28,7 @@ can leave the real artifact broken in a way `Planted` cannot restore. The repair
 SETS rather than the counts) was verified by reproducing the attack in a throwaway clone with its
 own git repo, and the output is in the commit that made it.
 
-So: 45 gates are re-proved on every run of this file, and one is proved by a procedure a reader has
+So: 48 gates are re-proved on every run of this file, and one is proved by a procedure a reader has
 to take on trust from a commit message. That is a weaker guarantee and it is the only one here.
 """
 from __future__ import annotations
@@ -521,10 +521,13 @@ def _(tmp):
         return run_check(slow=True)
 
 
-@case("assert a false count inside quotation marks", "quote exemption needs a real mention")
+@case("assert a false count inside quotation marks", "quote exemption is pinned to a registered line")
 def _(tmp):
     # THE ADVERSARY'S EXPLOIT ⑨, verbatim. Under the old rule the trigger was the single character
     # before the match, so this passed AND WAS PRINTED as `exempt: quoted — a recorded retraction`.
+    # The rule this case now tests is not the one it was written against: v4 asked for retraction
+    # language on the line and was defeated by negation (case 46); v5 pins the sha256 of the exact
+    # registered line. This plant fails under both, which is why the case survived the rewrite.
     target = HERE / "LIMITS.md"
     with Planted(target), Planted(HERE / "MANIFEST.json"):
         target.write_text(target.read_text().rstrip("\n") + "\n\n" +
@@ -788,6 +791,108 @@ def _(tmp):
         shutil.rmtree(scratch, ignore_errors=True)
 
 
+@case("launder a false count with a NEGATED retraction word", "registry pins the line, not the wording")
+def _(tmp):
+    # ROUND-10 ATTACK 5, and the cleanest demonstration in this campaign that a denylist over
+    # natural language cannot be widened into correctness. v4 exempted a quoted number if its line
+    # carried "retraction language" — a word list. The adversary wrote a sentence whose retraction
+    # word appears inside a NEGATION:
+    #
+    #     ...every one of them closed and independently machine-checked. NOTHING HERE IS RETRACTED.
+    #
+    # `retracted` matched. Two false counts entered the run and were printed by the mechanism in its
+    # own voice as `registered for this file`. Negation reuses the word, so no list of words can
+    # separate "this was retracted" from "nothing here is retracted"; widening the list makes the
+    # laundering sentence one word longer, not harder to write.
+    #
+    # v5 stops describing the line and NAMES it: the registry carries the sha256 of the exact line
+    # each registered quotation lives on. This plant writes a brand-new line, so its hash is in no
+    # registry entry and the exemption is simply not available — whatever the sentence says.
+    #
+    # THE NUMBERS HERE ARE THE REGISTERED ONES ON PURPOSE, and the first version of this case got
+    # that wrong. It planted 99 and 512 — numbers in no registry — which fires under v3, v4 and v5
+    # alike, so it tested nothing about the repair it was written for. The landed attack used
+    # `41 proofs` and `999 labelled statements`, both genuinely registered, in a NEW assertive
+    # sentence: v3 keyed the exemption on (document, number) and so exempted every occurrence in
+    # the file, and the run printed `exempt: LIMITS.md: 41 proofs` four times over a fabrication.
+    # A falsification case that plants something no version of the gate would have admitted is
+    # decoration one level up — it reports FIRED for a gate it never reached.
+    target = HERE / "LIMITS.md"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(target.read_text().rstrip("\n") + "\n\n" +
+                          'The argument, as it now stands, carries "41 proofs" and '
+                          '"999 labelled statements", every one of them closed and independently '
+                          "machine-checked. Nothing here is retracted.\n")
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
+@case("hide a .pyc inside an execute-only directory", "the bytecode gate globs the DIRECTORY")
+def _(tmp):
+    # ROUND-10 ATTACK 1, and the most damaging exploit of the campaign. The gate globbed `*.pyc`,
+    # and `rglob` cannot list what it cannot READ — a `chmod 0111` cache is traversable by name but
+    # not listable, so the walk yielded nothing and the gate printed clean.
+    #
+    # WHAT THE REAL PLANT CONTAINED, because "a .pyc shadowed its source" understates it: a forged
+    # `artifact_io.pyc`, compiled with UNCHECKED_HASH invalidation so Python would not compare it
+    # against the source, whose `count_labels` and `count_proofs` returned 88/40/55 where the object
+    # holds 68/26/33. `artifact_io` is the module check.py imports TO DO ITS COUNTING. So the run
+    # printed `labelled statements in ARGUMENT 88`, matched it against a doctored README marker, and
+    # closed with `all 98 checks passed — every number above was recomputed, none was quoted`, while
+    # `sha256(artifact_io.py)` equalled git HEAD and the manifest was clean. The artifact's own
+    # closing sentence was the thing falsified.
+    #
+    # The failure is not in the pattern: any
+    # predicate over a directory's CONTENTS is unavailable to an attacker who removes read
+    # permission. The repair moves the predicate outside the directory, where the parent's own
+    # listing settles it: `__pycache__` EXISTING is now the violation, and its existence is visible
+    # from a directory the walker can always read.
+    #
+    # Permissions are restored in `finally` before the tree is removed — `shutil.rmtree` cannot
+    # descend a 0o111 directory either, so a naive cleanup would leave the plant behind and every
+    # subsequent case would fail for a reason that has nothing to do with what it tests.
+    import os
+    cache = HERE / "__pycache__"
+    if cache.exists():                      # never plant over a real one; that is a mutation
+        return (99, "PRECONDITION FAILED: __pycache__ already present, refusing to plant")
+    try:
+        cache.mkdir()
+        (cache / "check.cpython-311.pyc").write_bytes(b"\x00\x00\x00\x00planted")
+        os.chmod(cache, 0o111)
+        return run_check()
+    finally:
+        os.chmod(cache, 0o755)
+        shutil.rmtree(cache, ignore_errors=True)
+
+
+@case("put a `@case(` line inside the module docstring", "case count comes from the AST")
+def _(tmp):
+    # ROUND-10 ATTACK 4, and the count gate was ONE DAY OLD when it fell. It counted textual
+    # `(?m)^@case\(` — a proxy for "cases the harness registers" — so the adversary wrote one such
+    # line INSIDE THIS DOCSTRING, where Python never executes it, and bumped both prose statements
+    # to match. Text count 46, `len(CASES)` 45, and the artifact certified 46 with exit 0.
+    #
+    # I first wrote this case as "append a real decorated function", which is a different and much
+    # weaker property: it tests that the gate notices a case that genuinely exists. The attack is
+    # the opposite — a case that does NOT exist inflating the count — and only the AST separates
+    # them, because a decorator in a string is text to a regex and nothing at all to a parser.
+    #
+    # The plant therefore adds the docstring line AND raises both declared counts to 49. Under the
+    # old regex both agree and the run is green; under the AST the file still holds 48 real cases
+    # and the gate must fire.
+    target, limits = HERE / "falsify_check.py", HERE / "LIMITS.md"
+    with Planted(target), Planted(limits), Planted(HERE / "MANIFEST.json"):
+        src = target.read_text()
+        src = must_replace(src, "So: 48 gates are re-proved",
+                           '@case("DOCSTRING PADDING — counted by a regex, run by nothing", "none")\n'
+                           "So: 49 gates are re-proved", 1)
+        target.write_text(src)
+        limits.write_text(must_replace(limits.read_text(), "the 48-case harness",
+                                       "the 49-case harness", 1))
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
 def _snapshot() -> dict:
     """Copy every manifest-listed file plus the authored scripts to a temp dir.
 
@@ -837,7 +942,7 @@ def main() -> int:
     rc, base = run_check()
     # THE ONE GATE THIS HARNESS MUST IGNORE, AND WHY IT IS NOT AN EXEMPTION I GET TO LIKE.
     # The git anchor asserts "the working tree equals what version control records". This script's
-    # entire method is to make that false thirty-one times in a row. Requiring it before planting
+    # entire method is to make that false once per case below. Requiring it before planting
     # is requiring a property the next line destroys, so it is not a weakened precondition — the
     # gate is inapplicable here in the way a thermometer is inapplicable to a colour.
     #
@@ -898,7 +1003,15 @@ def main() -> int:
     # here means a plant survived the restore, which is the one outcome that must stop the ship.
     post = [l.strip() for l in out.splitlines() if l.lstrip().startswith("FAIL")]
     ok = rc != 1 or (post and all(ANCHOR in l for l in post))
-    print(f"artifact restored and check.py green again: {ok} (exit {rc})")
+    # SAY WHICH OF THE TWO THIS IS. The line used to read `green again: True (exit 1)`, which is a
+    # summary word contradicted by the exit code printed beside it — the artifact carries a named
+    # defect class for exactly that, and its own harness was committing it. Exit 1 with only the
+    # anchor failing is a restored artifact in an author's dirty tree; exit 1 with anything else is
+    # a surviving plant. Those are different facts and they must not print the same sentence.
+    _how = ("clean" if rc == 0 else
+            "restored, and the only failure is the git anchor — the tree was already dirty"
+            if ok else "NOT RESTORED")
+    print(f"artifact restored and check.py green again: {ok} (exit {rc}, {_how})")
     for l in post:
         print(f"   still failing: {l}")
     if not ok:

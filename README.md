@@ -200,8 +200,12 @@ name was:
 2. **The counts** — statements, theorems, proofs, recomputed from the emitted notebook.
 3. **Build invariants** — the build is byte-reproducible, and a reader's build cannot overwrite the
    committed notebooks.
-4. **That the assertions can fail** — `falsify.py` plants a violation under each one and confirms it
-   fires. A suite that has never failed proves nothing.
+4. **That the assertions can fail** — `falsify.py` plants a violation under **each of its 23
+   science assertions** and confirms it fires. A suite that has never failed proves nothing.
+   ⚠ This line read *"under each one"* — a universal over the 98 checks in item 1–5, where the
+   coverage is 23. The gates are falsified separately by `falsify_check.py`, which item 1–5 does
+   not run; `verify.py`'s 71 assertions are executed by nothing at all. `LIMITS.md` §3a carries
+   the full coverage accounting, and this line now points at it instead of quietly outranging it.
 5. **One substantive claim, recomputed** — the generation cap censors the baseline cell, and for the
    **one** comparison cell that is both uncensored and has $l>e$ (`step0008`, the headline
    comparison) the reported collapse is a *lower* bound. Against `step0019` it is not claimed;

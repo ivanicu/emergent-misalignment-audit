@@ -88,13 +88,14 @@ I verified it with $2\times10^5$ draws before retracting. No proof depends on O4
 quarantine held — and the paragraph was still wrong.
 
 **`falsify_check.py` is the strongest instrument here and no gate invokes it.** `check.py` §4 runs
-`falsify.py` (the 23 science assertions); the 45-case harness that falsifies the *gates* is invoked
+`falsify.py` (the 23 science assertions); the 48-case harness that falsifies the *gates* is invoked
 by no document and no gate. It reported three DECORATION cases — including the flagship stored-output
 comparison — and **I committed anyway, without reading its log.** Two readers found the defect by
 reading output I had generated and ignored.
 
 > **⚠ The sentence above said "nothing runs it", and that stopped being true.** It is now run by
-> hand before every commit that touches a gate — most recently 45/45 firing, no DECORATION, no
+> hand before every commit that touches a gate — most recently **48/48 firing on 2026-07-26**, no
+> DECORATION, no
 > LAUNDERED. What remains true, and is the part that matters, is that **no document and no gate
 > invokes it**: a reader who runs the documented command never exercises it, so its result reaches
 > them only through a commit message. That is a weaker guarantee than a gate and it is why the
@@ -237,8 +238,11 @@ attacks it was sent to make all fail:
 recipe on the same base model, same 23 questions, same 8 checkpoints, agrees with this one at the
 baseline within **0.9%** and at the endpoint within **8%** — and gives **69.1 pp at step 8 against
 the published 35.1**. The ends replicate; the middle, which is what the claim is about, does not.
-**35.1 pp is a property of one training run, not of the transition.** The row says "at one scale and
-one checkpoint"; it should also say *at one run* and *on one axis* — because twelve text axes at
+**35.1 pp is a property of one training run, not of the transition.** The row now says *"at one
+scale, one checkpoint, one training run, and one text axis"* — ⚠ **this paragraph asked for that
+repair and then went on quoting the pre-repair wording as current**, a section below the place where
+§3b names that exact class. The repair landed in `README.md` and did not reach the document that
+prescribed it. It should say all four, and it does — because twelve text axes at
 step 8 give anywhere from 19% to 99% of the way through the transition, seven of them significant.
 The ordering survives all of it; the number does not travel.
 
