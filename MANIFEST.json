@@ -100,8 +100,8 @@
       "sha256": "32eadc409e66eddc30a5b4fdd827bf7a8b38ddbb0b58d44863b5033294ee529d"
     },
     "check.py": {
-      "bytes": 100373,
-      "sha256": "3d041144a501581a572ede72d0b1864d3b83e7355028ad136d1940489e755216"
+      "bytes": 102045,
+      "sha256": "d45001d3975d978c09599be668fb0689af33498ec3bce9c285bae12fcd1ab357"
     },
     "closure.py": {
       "bytes": 13569,

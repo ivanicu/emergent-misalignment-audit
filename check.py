@@ -9,8 +9,15 @@ the environment. Everything it needs is in this directory.
 
 WHY THE NUMBERS MOST PRONE TO DRIFT ARE ASSERTED HERE. (An earlier version of this line read
 "WHY EVERY NUMBER IN THE PROSE IS ASSERTED HERE" — a universal the README explicitly retracts:
-TWELVE markers and three patterns against ~123 numeric literals. The correction had reached the
+TWELVE markers and three patterns against the rest of the prose. The correction had reached the
 README and not the file the README was describing.)
+
+⚠ AND THAT LINE ITSELF QUOTED "~123 numeric literals", A FIGURE FROM NO METHOD AND NO CODE —
+in the header of the instrument whose subject is that unenforced numbers drift, describing the
+instrument's own coverage. A lens asked where 123 came from; the answer was nowhere. The
+denominator is now computed at the bottom of this file under a stated rule, and no bare value
+for it appears anywhere, because a different rule gives a different number and that is the
+whole reason it had to be a method rather than a value.
 
 AND THAT PARENTHESIS SAID "nine" FOR TWO MORE COMMITS. A commit message of mine claims the count was
 fixed "in two places, when there are twelve" — it was fixed in the two README instances and missed
@@ -1523,8 +1530,24 @@ if UNVERIFIED:
     print(f"\nEXIT 2 — {len(UNVERIFIED)} gate(s) could not run in this environment. Not a failure,")
     print("and not a clean pass either. Install the packages named above for exit 0.")
     sys.exit(2)
+# THE CLOSING SENTENCE QUOTED ITS OWN COVERAGE DENOMINATOR AND NOBODY HAD COUNTED IT.
+# It read "~123 numeric literals kept true by hand" — a figure produced by no method and no code,
+# in the instrument's own final sentence, about the instrument's own coverage. A lens asked where
+# 123 came from and the answer was nowhere. The number is computable from the files this script
+# already reads, so it is computed: every integer of two digits or more in the prose documents,
+# excluding years, code blocks and the markers themselves. That rule is stated because no rule is
+# canonical here — a different rule gives a different number, which is exactly why a bare value was
+# the wrong thing to print.
+_hand = 0
+for _d in ("README.md", "LIMITS.md", "FINDINGS.md", "THIRD_PARTY.md", "PRIOR_ART.md"):
+    _s = (HERE / _d).read_text()
+    _s = re.sub(r"<!--.*?-->", "", _s, flags=re.S)
+    _s = re.sub(r"```.*?```", "", _s, flags=re.S)
+    _hand += len([_n for _n in re.findall(r"(?<![\w.$])(\d{2,})(?![\w.%])", _s)
+                  if not re.match(r"(19|20)\d\d$", _n)])
 print("\nWhat this does NOT establish: that the arguments are correct. It establishes that the")
 print("evidence is intact, the counts are real, the build is reproducible, the assertions can")
-print("fail, and the TWELVE MARKED NUMBERS match the object — not the prose, which is ~123 numeric")
-print("literals kept true by hand. Correctness is what ARGUMENT.ipynb is for, and it")
-print("is checked by reading — see LIMITS.md for what reading will not settle either.")
+print("fail, and the TWELVE MARKED NUMBERS match the object — not the prose, which carries")
+print(f"{_hand} further integers (2+ digits, years and code excluded) kept true by hand across five")
+print("documents. Correctness is what ARGUMENT.ipynb is for, and it is checked by reading —")
+print("see LIMITS.md for what reading will not settle either.")
