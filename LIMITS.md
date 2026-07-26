@@ -87,11 +87,18 @@ observation whose purpose was to show T9 sharpening someone else's work. A seven
 I verified it with $2\times10^5$ draws before retracting. No proof depends on O4 — the empirical
 quarantine held — and the paragraph was still wrong.
 
-**`falsify_check.py` is the strongest instrument here and nothing runs it.** `check.py` §4 runs
+**`falsify_check.py` is the strongest instrument here and no gate invokes it.** `check.py` §4 runs
 `falsify.py` (the 23 science assertions); the 45-case harness that falsifies the *gates* is invoked
 by no document and no gate. It reported three DECORATION cases — including the flagship stored-output
 comparison — and **I committed anyway, without reading its log.** Two readers found the defect by
-reading output I had generated and ignored. That is the cheapest failure in this entire artifact:
+reading output I had generated and ignored.
+
+> **⚠ The sentence above said "nothing runs it", and that stopped being true.** It is now run by
+> hand before every commit that touches a gate — most recently 45/45 firing, no DECORATION, no
+> LAUNDERED. What remains true, and is the part that matters, is that **no document and no gate
+> invokes it**: a reader who runs the documented command never exercises it, so its result reaches
+> them only through a commit message. That is a weaker guarantee than a gate and it is why the
+> sentence is narrowed rather than deleted. That is the cheapest failure in this entire artifact:
 the instrument was right, ran to completion, and was not looked at.
 
 **Still true, and not repaired:** `verify.py` ships 71 assertions that nothing in this repository

@@ -231,7 +231,10 @@ cited no one.
 **What this panel does NOT mean.** Four rounds of these lenses, over the attack families actually
 run, surfaced these objections. It does not mean the artifact is correct — correct arithmetic on the
 wrong comparison is the failure no lens here catches. **Saturation was not reached.** New defect
-classes per round: **43, 18, 9, 8.** The decline flattened in round 4 rather than continuing, because
+classes per round: **43, 18, 9, 8** — and this table stops there. Later rounds ran against
+deliberately frozen commits and are recorded in the findings ledger and the commit log rather than
+here; through round 10 the per-round series continues **2, 3, 6, 1, 2**, so the rule (two consecutive
+rounds with nothing new) has still never been met. The decline flattened in round 4 rather than continuing, because
 round 4 finally ran four families that had never run — the baseline, the forking paths, the negative
 space, and does-it-matter. Every applicable family has now been run at least once, which is a
 milestone and not a finish: the stopping rule is two consecutive rounds with nothing new, and no
