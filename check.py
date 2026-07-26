@@ -43,6 +43,60 @@ UNVERIFIED: list[str] = []   # a check that could not run here is NOT a pass
 N = 0
 
 
+def missing(mod: str) -> bool:
+    """Is `mod` GENUINELY unimportable here? Nothing may report UNVERIFIED without asking this.
+
+    UNVERIFIED WAS THE CHEAPEST ATTACK IN THIS FILE, and it was cheap because it is polite. Every
+    site below decided "the environment is incomplete" by REGEX over a subprocess's output — so
+    anyone who could get the string `ModuleNotFoundError: No module named 'numpy'` into that stream
+    could switch a gate off, and the artifact would apologise to the reader for their machine.
+    An adversary did it with one line in a notebook cell:
+
+        import os as _o; _o.write(1, b"ModuleNotFoundError: No module named 'numpy'\\n")
+
+    `contextlib.redirect_stdout` rebinds `sys.stdout`; a raw write to fd 1 goes straight past it
+    into this process's pipe. numpy 2.4.6 was installed the whole time. §3b — by its own comment
+    "the only one that would have caught the packaging defect" — reported UNVERIFIED, the check
+    count dropped 76 to 74 with nothing marking the loss, and the printed advice was "Install the
+    packages named above for exit 0."
+
+    That is worse than a gate that silently passes. A silent pass is an absence of evidence; this
+    MANUFACTURES an explanation, aims it at the reader, and tells them to go fix their computer.
+
+    Every subprocess here runs `sys.executable`, so the honest question is answerable in-process
+    and costs nothing. A claimed-missing module that imports fine is not an environment problem —
+    it is a false statement about this machine, and it is now a FAILURE, not an excuse.
+    """
+    import importlib.util
+    try:
+        return importlib.util.find_spec(mod) is None
+    except (ImportError, ValueError):
+        return True
+
+
+# HOW MANY `check()` CALLS EACH UNVERIFIED GATE TOOK WITH IT. Without this the total is the number
+# of checks that RAN, so switching a gate off makes the artifact report a smaller, still-green
+# number — 76 became 74 with nothing naming the loss, and the two that vanished were §3b's
+# source-vs-builder and output-vs-executed comparisons, i.e. the strongest pair in the file. A count
+# that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
+# ones I let run passed", which is the only distinction the number is for.
+SUPPRESSED: list[int] = []
+EXPECTED_TOTAL = 77    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+
+
+def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
+    """Record `gate` as UNVERIFIED for want of `mod` — or FAIL if that claim is false."""
+    mod = mod.strip().split(",")[0].strip()
+    if not missing(mod):
+        check(f"{gate}: claimed to need `{mod}`, which IS importable here", mod,
+              predicate=lambda _: False)
+        return False
+    UNVERIFIED.append(f"{gate} (needs {mod}) — {suppresses} check(s) not run")
+    SUPPRESSED.append(suppresses)
+    print(f"  ????  {gate:<58} UNVERIFIED — needs {mod}")
+    return True
+
+
 def check(label: str, got, want=None, *, predicate=None) -> None:
     """Record one assertion. Prints the value it derived, so a reader can see the number."""
     global N
@@ -84,7 +138,7 @@ import subprocess as _sp
 _git = _sp.run(["git", "-C", str(HERE), "status", "--porcelain", "--", "."],
                capture_output=True, text=True)
 if _git.returncode != 0:
-    UNVERIFIED.append("tree-vs-git (not a git work tree)")
+    UNVERIFIED.append("tree-vs-git (not a git work tree)"); SUPPRESSED.append(1)
     print(f"  ????  {'evidence matches version control':<58} UNVERIFIED — not under git")
 else:
     dirty = [l for l in _git.stdout.splitlines() if l.strip()]
@@ -271,9 +325,16 @@ if fo and not dep2:
         dep2 = _M(refused.group(1))
 if fo is None:
     pass
+elif dep2 and raised is None and dependency_claim(
+        "every cell runs against the staged evidence", dep2.group(1)):
+    pass
 elif dep2 and raised is None:
-    UNVERIFIED.append(f"live notebook execution (needs {dep2.group(1)})")
-    print(f"  ????  {'every cell runs against the staged evidence':<58} UNVERIFIED — needs {dep2.group(1)}")
+    # The message named a module that imports fine, so this is not an environment problem. It was
+    # planted — one raw fd-1 write in a notebook cell is enough — and `dependency_claim` has already
+    # recorded the FAILURE. Falling through to the real comparison would run it against a tree the
+    # attacker just proved they can write to, so the honest report is the failure, not a second
+    # verdict computed on top of it.
+    pass
 else:
     n_raised = 0 if clean else (int(raised.group(1)) if raised else -1)
     check("every cell runs against the staged evidence (0 raised)", n_raised, 0)
@@ -398,7 +459,7 @@ if SKIP_SLOW:
     UNVERIFIED.append("Lean theorems (CHECK_SKIP_SLOW=1)")
     print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} SKIPPED (CHECK_SKIP_SLOW=1)")
 elif not LEAN:
-    UNVERIFIED.append("Lean theorems (no `lean` on PATH)")
+    UNVERIFIED.append("Lean theorems (no `lean` on PATH)"); SUPPRESSED.append(5)
     print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} UNVERIFIED — no lean binary")
 else:
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lean-check-"))
@@ -534,18 +595,27 @@ m = re.search(r"(\d+)/(\d+) assertions fired", fal.stdout)
 # branch exists to prevent, one API break away. Any exception with no assertion count is an
 # environment problem, not a defect in the work.
 dep = re.search(r"ModuleNotFoundError: No module named '(\w+)'", fal.stderr)
-if dep is None and fal.returncode != 0 and not re.search(r"\d+/\d+ assertions fired", fal.stdout):
-    _e = re.search(r"^(\w*Error): (.+)$", fal.stderr, re.M)
-    if _e:
-        class _D:
-            def __init__(s_, t): s_.t = t
-            def group(s_, _): return s_.t
-        dep = _D(f"a working environment ({_e.group(1)})")
 
-if m is None and dep:
-    UNVERIFIED.append(f"falsifiability of the science suite (falsify.py needs {dep.group(1)})")
-    print(f"  ????  {'assertions fire on planted false input':<58} "
-          f"UNVERIFIED — needs {dep.group(1)}")
+# THE FALLBACK THAT USED TO LIVE HERE IS DELETED, AND ITS DELETION COSTS SOMETHING REAL.
+# It read: any `SomeError: ...` in stderr with no assertion summary means "a working environment".
+# The stated worry was sound — numpy 3.0 dropping an attribute would raise AttributeError, the
+# ModuleNotFoundError regex would miss, and a reader would see a package problem reported as a
+# defect in the work. But the cure was strictly worse than the disease: it converted EVERY crash
+# into an environment excuse, so one planted `raise ValueError` in falsify.py — a file no manifest
+# hashes — disarmed the gate whose entire purpose is that a suite which has never failed proves
+# nothing, and charged the failure to the reader's machine.
+#
+# Trading "a real defect can be mislabelled as an environment problem" for "an environment problem
+# can be mislabelled as a real defect" is the right direction, and it is not symmetric: the second
+# error is loud, lands on the author, and gets fixed. The first is quiet, lands on the reader, and
+# clears the artifact. A false acquittal is permanent because nobody re-examines a cleared claim.
+#
+# So only a genuinely absent module excuses this gate, and `dependency_claim` verifies the absence
+# rather than believing the message.
+if m is None and dep and dependency_claim("assertions fire on planted false input", dep.group(1)):
+    pass
+elif m is None and dep:
+    pass          # dependency_claim already recorded the FAILURE — the module imports fine
 else:
     check("falsify.py ran", m is not None, True)
     if m:
@@ -616,9 +686,15 @@ try:
             tok_bad.append(fp.stem)
     check("census token statistics recomputed with the staged tokenizer", tok_bad,
           predicate=lambda b: b == [])
+except ImportError:
+    # NARROWED FROM `except Exception`, for the reason the whole UNVERIFIED path was narrowed: a
+    # bare Exception handler here excused a corrupt tokenizer.json, a KeyError from a census whose
+    # shape had drifted, and any arithmetic bug in the four lines above — all under the advice
+    # "install `tokenizers`". Only the absence of the package is an environment fact; everything
+    # else that can go wrong in this block is a fact about the artifact.
+    dependency_claim("census token statistics", "tokenizers")
 except Exception as exc:
-    UNVERIFIED.append(f"census token tier (needs `tokenizers`: {type(exc).__name__})")
-    print(f"  ????  {'census token statistics':<58} UNVERIFIED — install `tokenizers` to check")
+    check(f"census token tier raised {type(exc).__name__}: {str(exc)[:80]}", False, True)
 
 check("cells measured", len(cens["cells"]), predicate=lambda n: n >= 3)
 base = cens["cells"]["step0000"]
@@ -897,6 +973,23 @@ if FAIL:
     for f in FAIL:
         print(f"   · {f}")
     sys.exit(1)
+# THE TOTAL IS DECLARED, SO A GATE CANNOT LEAVE WITHOUT SAYING SO.
+# ASSERTED ONLY IN A FULL RUN, AND THAT LIMIT IS THE HONEST ONE. CHECK_SKIP_SLOW=1 omits two whole
+# sections; declaring how many checks each contains would put a hand-typed number in the file whose
+# subject is hand-typed numbers going stale — I guessed 3 and 5 for sections holding 23 between
+# them, which is exactly the failure. So the accounting is exact where it can be exact (the full
+# run a reader performs) and silent where it cannot, rather than approximate everywhere.
+_total = N + sum(SUPPRESSED)
+if not SKIP_SLOW and _total != EXPECTED_TOTAL:
+    print(f"\n  FAIL  gate accounting: {N} ran + {sum(SUPPRESSED)} suppressed = {_total}, "
+          f"declared {EXPECTED_TOTAL}")
+    print("        A check disappeared without being reported as UNVERIFIED, or one was added")
+    print("        without updating EXPECTED_TOTAL. Either way the printed count is not the")
+    print("        number of gates this artifact has.")
+    sys.exit(1)
+if SKIP_SLOW:
+    print(f"  (CHECK_SKIP_SLOW=1: {N} of the {EXPECTED_TOTAL} declared gates ran; "
+          f"the two slow sections were not counted)")
 print(f"all {N} checks passed — every number above was recomputed, none was quoted")
 if UNVERIFIED:
     # EXIT 2, NOT 0. This printed "UNVERIFIED is not a pass" and then exited 0 anyway, so any CI

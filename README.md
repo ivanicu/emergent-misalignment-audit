@@ -66,7 +66,7 @@ If you want the short version of why to trust anything here: **the failures are 
 their causes, in the author's own words.**
 
 <!--CHECK:theorems=26--> <!--CHECK:statements=68--> <!--CHECK:proofs=33-->
-<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=310-->
+<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=328-->
 
 The quantities most prone to drift are re-derived by `check.py`, which fails if one has moved. That
 is not every number in these files, and an earlier version of this sentence claimed it was: nine

@@ -61,8 +61,10 @@ class Planted:
         return False
 
 
-def run_check(slow: bool = False) -> tuple[bool, str]:
-    """Run the handle. `slow=True` includes notebook execution and Lean, which take minutes.
+def run_check(slow: bool = False) -> tuple[int, str]:
+    """Run the handle, returning its EXIT CODE (0 pass · 1 failed · 2 UNVERIFIED) and stdout.
+
+    `slow=True` includes notebook execution and Lean, which take minutes.
 
     Most planted violations are caught by cheap gates, so running the expensive sections 17 times
     would turn this pass into an hour for no extra information. The cases that TEST those sections
@@ -77,7 +79,21 @@ def run_check(slow: bool = False) -> tuple[bool, str]:
         env["CHECK_SKIP_SLOW"] = "1"
     r = subprocess.run([PY, "check.py"], cwd=HERE, capture_output=True, text=True,
                        timeout=1200, env=env)
-    return r.returncode == 0, r.stdout
+    # EXIT 2 IS NOT A FAILURE, AND READING IT AS ONE MADE THIS HARNESS UNFALSIFIABLE.
+    # check.py grew a three-valued exit code — 0 all passed, 2 passed but something was UNVERIFIED,
+    # 1 something FAILED. This function still asked `returncode == 0`. Since every fast case runs
+    # with CHECK_SKIP_SLOW=1, which reports the slow gates as UNVERIFIED, EVERY case would have
+    # exited 2 and been scored FIRED — including a case whose gate did nothing at all. The harness
+    # built to prove that no check is decoration would itself have become the purest decoration in
+    # the artifact, reporting 31/31 without a single gate having to work.
+    #
+    # It surfaced as a refusal to start (the precondition read exit 2 as "not green"), which is the
+    # only reason it was found: the same defect on the case path is SILENT, because a false FIRED
+    # looks exactly like a real one. The loud half of a bug is a gift.
+    #
+    # So the verdict is taken from the code that means what is being asked, and UNVERIFIED is
+    # neither pass nor fail here — it is "this run could not answer", which is what it says.
+    return r.returncode, r.stdout
 
 
 CASES: list[tuple[str, str, callable]] = []
@@ -539,26 +555,57 @@ def main() -> int:
     # snapshotted that dirty state and faithfully restored it, so the damage survived the repair.
     # Refuse to start unless the artifact is already green — otherwise this script preserves
     # whatever it finds and calls it the baseline.
-    clean, _ = run_check()
-    if not clean:
+    rc, base = run_check()
+    # THE ONE GATE THIS HARNESS MUST IGNORE, AND WHY IT IS NOT AN EXEMPTION I GET TO LIKE.
+    # The git anchor asserts "the working tree equals what version control records". This script's
+    # entire method is to make that false thirty-one times in a row. Requiring it before planting
+    # is requiring a property the next line destroys, so it is not a weakened precondition — the
+    # gate is inapplicable here in the way a thermometer is inapplicable to a colour.
+    #
+    # It is exempted BY NAME and reported, never by relaxing `rc`. The moment this becomes "ignore
+    # non-zero exits" it stops distinguishing a dirty tree from a broken artifact, which is the
+    # confusion the three-valued exit code exists to prevent.
+    ANCHOR = "evidence matches version control"
+    failing = [l.strip() for l in base.splitlines() if l.lstrip().startswith("FAIL")]
+    only_anchor = failing and all(ANCHOR in l for l in failing)
+    if rc == 1 and not only_anchor:
         print("REFUSING TO RUN — check.py is not green before planting anything.")
         print("Fix the artifact first (`python3 seal.py` if a rebuild left the manifest stale);")
         print("a harness that snapshots a broken tree will restore it broken.")
+        for l in failing:
+            print(f"   {l}")
         return 2
+    if only_anchor:
+        print("NOTE — starting on a tree with UNCOMMITTED CHANGES. The git anchor is the only")
+        print("failing gate and it cannot hold during a run that plants violations by design.")
+        print("Every OTHER gate was green before planting, which is the property that matters here.")
+        print("If you are the author: the baseline below is of your working copy, not of a commit.\n")
 
     print(f"planting {len(CASES)} violations, running check.py against each\n")
     snap = _snapshot()
-    decoration, collateral = [], {}
+    decoration, launder, collateral = [], [], {}
     for i, (name, gate, fn) in enumerate(CASES, 1):
-        passed, out = fn(None)
-        fired = not passed
+        rc, out = fn(None)
+        # THREE OUTCOMES, BECAUSE THERE ARE THREE. A planted violation that ends in UNVERIFIED has
+        # not been caught; it has been EXCUSED, and the adversary lens showed that is the cheapest
+        # attack available — a gate you disable reports as a package the reader is missing. Scoring
+        # it as FIRED would credit the gate for the attack that defeats it, so it gets its own name.
+        fired = rc == 1
+        excused = rc == 2
         hit = _restore(snap)
         if hit:
             collateral[name] = hit
-        status = "FIRED   " if fired else "DECORATION"
+        status = "FIRED   " if fired else ("LAUNDERED" if excused else "DECORATION")
         print(f"  {status}  {i:>2}. {name:<46} → {gate}")
-        if not fired:
+        if excused:
+            launder.append(f"{name} → {gate}")
+        elif not fired:
             decoration.append(f"{name} → {gate}")
+
+    if launder:
+        print("\nPLANTED VIOLATIONS THAT ENDED IN *UNVERIFIED* — not caught, excused:")
+        for d in launder:
+            print(f"   · {d}")
 
     if collateral:
         print("\ncollateral repaired after these cases (a per-case backup was not sufficient):")
@@ -566,17 +613,26 @@ def main() -> int:
             print(f"   {k}: {', '.join(v)}")
 
     print()
-    ok, _ = run_check()
-    print(f"artifact restored and check.py green again: {ok}")
+    rc, out = run_check()
+    # Same exemption, same reason: if the run STARTED on a dirty tree the restore returns it to that
+    # dirty tree, and the anchor fails for the state the author was already in. Any OTHER failure
+    # here means a plant survived the restore, which is the one outcome that must stop the ship.
+    post = [l.strip() for l in out.splitlines() if l.lstrip().startswith("FAIL")]
+    ok = rc != 1 or (post and all(ANCHOR in l for l in post))
+    print(f"artifact restored and check.py green again: {ok} (exit {rc})")
+    for l in post:
+        print(f"   still failing: {l}")
     if not ok:
         print("RESTORE FAILED — the artifact is dirty; do not ship")
         return 2
 
-    print(f"\n{len(CASES) - len(decoration)}/{len(CASES)} gates fired on their own violation.")
+    print(f"\n{len(CASES) - len(decoration) - len(launder)}/{len(CASES)} gates fired on their own violation.")
     if decoration:
         print("\nGATES THAT DID NOT FIRE — these are decoration, not checks:")
         for d in decoration:
             print(f"   · {d}")
+        return 1
+    if launder:
         return 1
     print("Every gate in check.py has now been shown to fail when the thing it checks is false.")
     return 0
