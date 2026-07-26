@@ -125,6 +125,33 @@ def run_check(slow: bool = False) -> tuple[int, str]:
     return r.returncode, r.stdout
 
 
+ANCHOR_TEXT = "evidence matches version control"
+
+
+def _matches_gate(fail_line: str, gate: str) -> bool:
+    """Does this FAIL line count as the named gate having fired?
+
+    **PROXY LEDGER, because this is a proxy and pretending otherwise is the defect it replaces.**
+
+    PROPERTY  — the gate this case names detected the planted violation.
+    PROXY     — a FAIL line appeared that is not the git anchor.
+    IMPLICATION — sound in ONE direction only: if the only failure is the anchor, the named gate
+                  certainly did not fire. The converse does not hold — a non-anchor FAIL might come
+                  from a different gate than the one named, and this function cannot tell.
+    WITNESS   — case 12 (`break a cell so the notebook cannot run`) also trips the stored-output
+                comparison; both are real, and I cannot say from here which one the case tested.
+    SAFE SIDE — rule only on the sound side. Anchor-only ⇒ UNATTRIBUTED, never FIRED.
+
+    **The decisive measurement is not this function; it is running the whole harness in a NON-GIT
+    copy**, where the anchor reports UNVERIFIED and cannot mask anything. A control lens did that
+    and got **47 FIRED / 1 LAUNDERED**, against the 48/48 this file had been reporting since it was
+    written. Full attribution would require every case to name its check's exact string, and that
+    is 48 edits worth making — it is not made here, and this docstring is why the number you get
+    from a git tree is still weaker than the number from a non-git one.
+    """
+    return ANCHOR_TEXT not in fail_line
+
+
 CASES: list[tuple[str, str, callable]] = []
 
 
@@ -949,7 +976,7 @@ def main() -> int:
     # It is exempted BY NAME and reported, never by relaxing `rc`. The moment this becomes "ignore
     # non-zero exits" it stops distinguishing a dirty tree from a broken artifact, which is the
     # confusion the three-valued exit code exists to prevent.
-    ANCHOR = "evidence matches version control"
+    ANCHOR = ANCHOR_TEXT   # one definition; the module-level constant is the home
     failing = [l.strip() for l in base.splitlines() if l.lstrip().startswith("FAIL")]
     only_anchor = failing and all(ANCHOR in l for l in failing)
     if rc == 1 and not only_anchor:
@@ -974,14 +1001,37 @@ def main() -> int:
         # not been caught; it has been EXCUSED, and the adversary lens showed that is the cheapest
         # attack available — a gate you disable reports as a package the reader is missing. Scoring
         # it as FIRED would credit the gate for the attack that defeats it, so it gets its own name.
-        fired = rc == 1
+        # ⚠ `fired = rc == 1` WAS THE WHOLE VERDICT, AND IT IS A PROXY THAT IS SOUND IN NEITHER
+        # DIRECTION. Every plant below writes to a tracked file, so in a clean work tree the git
+        # anchor — `evidence matches version control` — fires on ALL 48 whether or not the gate the
+        # case names does anything at all. A control lens ran the isolation control I never did: the
+        # same 48 cases in a NON-GIT copy, where the anchor cannot mask the result. **47 FIRED, 1
+        # LAUNDERED.** Case 42 lands nothing: it appends a row carrying one `|` to
+        # `retracted_numbers.txt`, the parser at check.py requires `>= 2`, so the row is silently
+        # discarded before the registry the gate reads is built — and the run's only FAIL was the
+        # anchor. The case had been reported FIRED since the day it was written.
+        #
+        # This file installs `must_replace` precisely so a no-op plant cannot be miscounted, and
+        # then scored its own verdict with a proxy that miscounts no-op plants. So the verdict is
+        # now ATTRIBUTED: the FAIL lines must name the gate the case claims to test.
+        failing = [l.strip() for l in out.splitlines() if l.lstrip().startswith("FAIL")]
+        named = [l for l in failing if _matches_gate(l, gate)]
+        anchor_only = bool(failing) and all(ANCHOR_TEXT in l for l in failing)
+        fired = rc == 1 and bool(named)
         excused = rc == 2
+        # rc == 1 with no FAIL line naming this gate: something failed, but not the thing under
+        # test. That is UNATTRIBUTED, and folding it into FIRED is how case 42 survived.
+        unattributed = rc == 1 and not named
         hit = _restore(snap)
         if hit:
             collateral[name] = hit
-        status = "FIRED   " if fired else ("LAUNDERED" if excused else "DECORATION")
+        status = ("FIRED   " if fired else "UNATTRIB" if unattributed
+                  else "LAUNDERED" if excused else "DECORATION")
         print(f"  {status}  {i:>2}. {name:<46} → {gate}")
-        if excused:
+        if unattributed:
+            why = "only the git anchor failed" if anchor_only else f"failed: {failing[:1]}"
+            decoration.append(f"{name} → {gate}  [UNATTRIBUTED — {why}]")
+        elif excused:
             launder.append(f"{name} → {gate}")
         elif not fired:
             decoration.append(f"{name} → {gate}")

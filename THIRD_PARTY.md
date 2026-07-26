@@ -16,7 +16,7 @@ the headline requires a package."* Both halves were false and two independent re
 
 **What is true now.** `check.py`'s own imports are stdlib. Gates that need a package report
 **UNVERIFIED** with the missing module named — not a pass, not a failure. On a stock Python you get
-**53 passed, 4 UNVERIFIED, exit 2**; with `numpy`, `torch`, `tokenizers` and `lean` present you get
+**62 passed, 4 UNVERIFIED, exit 2** (this said 53 until it was measured); with `numpy`, `torch`, `tokenizers` and `lean` present you get
 **98 passed, exit 0**. The distinction matters because a missing dependency is a fact about your
 machine and a failing gate is a fact about this work, and they must not look alike.
 
@@ -47,7 +47,7 @@ no CUDA is required, and no weights ship with this artifact.
 
 | what | origin | licence / status |
 |---|---|---|
-| `data/scripts/*.py` (13 files) | the audited research project | **not mine.** Byte-identical copies, including their own absolute paths. They are the object under audit; editing them would fabricate provenance. Unlicensed research code, included as evidence for scrutiny. |
+| `data/scripts/*.py` (13 files) | the audited research project | **not written for this audit** — ⚠ this cell said **"not mine"**, which is false: `git log` gives one author for the audited repositories and for this one. They are my own research code, staged as the object under audit.  Byte-identical copies, including their own absolute paths. They are the object under audit; editing them would fabricate provenance. Unlicensed research code, included as evidence for scrutiny. |
 | `data/experiments/**`, `data/experiments_ds/**`, `data/fits/**`, `data/derived/**` | the same two research projects | model-generated text and derived tensors from those runs |
 | `data/data/raw/openai_persona_features/eval/core_misalignment.csv` | OpenAI persona-features evaluation set, via the audited project | see that project's terms |
 | `data/data/processed/openai_full/sft_synthetic/health_incorrect.jsonl` | same | same |

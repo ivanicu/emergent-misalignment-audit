@@ -218,7 +218,7 @@ the thing being measured differs by reader, and an average would hide precisely 
 > exits 1 on a stray `.pyc`, and a read-only tree exits 1 with no diagnostic. **A lens I forgot to run
 > found the two failures an operator would hit first.**
 
-**The adversary is the number to read.** 7 → 12 → 34 across three rounds. In round 2 it went
+**The adversary is the number to read.** 7 → 12 → 34 → 12 → 28 → 11 → 38 across **seven** rounds — ⚠ this line reported the first three and stopped at its local maximum. Two controls the panel actually ran are also absent from this document and sit only in the unshipped ledger: a **planted-defect lens** (a copy of the sealed tree with two defects inserted; both found at severity 5, ranked 1st and 5th of 18 — the panel's own false-negative rate, 0 of 2) and a **test-retest** (the same lens, the same brief, byte-identical frozen bytes: 62 then 66, top four findings identical). Those are the two best controls in the campaign and a reader of this artifact could not know they exist. In round 2 it went
 8-for-9 against the round-1 repairs, six exploits printing `all 76 checks passed`, exit 0. In round 3,
 **three of six attacks failed structurally** — it could not find a seam in the dependency-excuse
 repair, the gate accounting, or the module-shadow pin — and the three that landed are all one shape:
@@ -233,7 +233,11 @@ run, surfaced these objections. It does not mean the artifact is correct — cor
 wrong comparison is the failure no lens here catches. **Saturation was not reached.** New defect
 classes per round: **43, 18, 9, 8** — and this table stops there. Later rounds ran against
 deliberately frozen commits and are recorded in the findings ledger and the commit log rather than
-here; through round 10 the per-round series continues **2, 3, 6, 1, 2**, so the rule (two consecutive
+here; through round 10 the per-round series continues **2, 3, 6, 1, 2, 7** — ⚠ **that last value
+was missing and this sentence still said "through round 10"**: it was written before round 10's
+runs existed, so it asserted a range the ledger did not yet contain, and the omitted value is
+the second-highest of the last seven rounds, in the paragraph arguing the count is declining.
+Round 11 adds **13** more. So the rule (two consecutive
 rounds with nothing new) has still never been met. The decline flattened in round 4 rather than continuing, because
 round 4 finally ran four families that had never run — the baseline, the forking paths, the negative
 space, and does-it-matter. Every applicable family has now been run at least once, which is a

@@ -40,7 +40,11 @@ being absent.
 
 > **⚠ That sentence used to give the wrong reason, and two blind readers caught it on identical
 > bytes.** It said the attempt failed *"because the judgment files are not staged"*. **They are
-> staged** — 178 `.jsonl` files across eleven `judgments*` directories — and `MANIFEST.json` excludes
+> staged** — **114** `.jsonl` files across eleven `judgments*` directories (the 178 an earlier
+> version of this line gave is the whole of `data/experiments`, a different population; the tree
+> now holds 188 there, and `PROOF.ipynb` cell 157's own stored output says `114 judgment files
+> staged` — a correct total attached to the wrong denominator, inside the block written to repair
+> a denominator error) — and `MANIFEST.json` excludes
 > exactly three, none of which is where `EVIL` lives. The real reason is one line down the page and
 > in `LIMITS.md` and `PROOF.ipynb` §14: **the staged rows record neither which rubric ran nor the
 > categories the judge was shown.** A missing FIELD, not a missing FILE. The verdict was right
@@ -62,7 +66,12 @@ python3 check.py     # CPU only · no network · no weights · no credentials
 ```
 
 <!--CHECK:checks_full=98--> checks, exit 0, in a full environment; on a bare standard-library Python
-53 pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. **Two of the
+**62** pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. ⚠ **This
+said 53 in three files at once.** A provenance lens ran the advertised command in a bare
+environment and got 62; I reproduced it with `env -i PATH=/usr/bin:/bin python3 check.py`. The
+commit that introduced 53 records in its own body that it was unifying three files that
+disagreed — and unified them on a value none of them had measured, which converts a visible
+discrepancy into an invisible shared error. **Two of the
 numbers in the table above are enforced too** — <!--CHECK:ds_files=10--> and
 <!--CHECK:pf_files=209--> are re-derived from the staged tree by `check.py`, because a page whose
 argument is that unenforced numbers drift should not carry unenforced numbers.
@@ -216,7 +225,12 @@ name was:
    science assertions** and confirms it fires. A suite that has never failed proves nothing.
    ⚠ This line read *"under each one"* — a universal over the 98 checks in item 1–5, where the
    coverage is 23. The gates are falsified separately by `falsify_check.py`, which item 1–5 does
-   not run; `verify.py`'s 71 assertions are executed by nothing at all. `LIMITS.md` §3a carries
+   not run; `verify.py`'s 71 assertions are executed by nothing at all — so coverage is **23 of the
+   71 `Assert` nodes in `nb/cells/`, about 32%**, and `falsify.py` plants against its own re-typed
+   copies of those checks rather than against the cells, with nothing detecting drift between the
+   two. ⚠ An earlier version of this line pointed at `LIMITS.md` **§3a**, which does not exist —
+   this file's sections are 1, 2, 3, 3b, 3c, 3f, 4, 5, 6. A pointer to content not at the named
+   location, written into the repair for an overclaim. `LIMITS.md` §2 carries
    the full coverage accounting, and this line now points at it instead of quietly outranging it.
 5. **One substantive claim, recomputed** — the generation cap censors the baseline cell, and for the
    **one** comparison cell that is both uncensored and has $l>e$ (`step0008`, the headline
@@ -225,7 +239,12 @@ name was:
    this line said *"more than any cell it is compared to, so every reported collapse is a lower
    bound"* — withdrawn; see `LIMITS.md`.
 6. **Some of the prose** — twelve machine-checked markers plus three quantity patterns matched
-   wherever they appear. This file carries ~25 numeric literals and `LIMITS.md` ~98, so most are
+   wherever they appear. ⚠ **The figures that used to be here — `~25` and `~98` — came from no
+   counting method and no code, in the paragraph describing this artifact's own anti-drift
+   mechanism.** Counted three ways just now: every digit-run gives **233** in this file and
+   **252** in `LIMITS.md`; integers of two digits or more, excluding years, code blocks and the
+   markers themselves, gives **72** and **55**. No single number is *the* count — which is the
+   point, and why the old figures should have been a method rather than a value. So most are
    **not** re-derived. An earlier version of this README claimed all of them were.
 
 It does **not** check that the arguments are correct. That is what reading is for, and `LIMITS.md`

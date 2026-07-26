@@ -94,8 +94,21 @@ comparison — and **I committed anyway, without reading its log.** Two readers 
 reading output I had generated and ignored.
 
 > **⚠ The sentence above said "nothing runs it", and that stopped being true.** It is now run by
-> hand before every commit that touches a gate — most recently **48/48 firing on 2026-07-26**, no
-> DECORATION, no
+> hand before every commit that touches a gate — and **the 48/48 that sentence used to report was
+> an artefact of running it inside a git work tree.** Every plant writes to a tracked file, so the
+> git anchor fires on all 48 whether or not the gate the case names does anything; the harness's
+> verdict was `fired = rc == 1`, which cannot tell those apart. A control lens ran the isolation
+> control I never did — the same 48 cases in a **non-git copy**, where the anchor reports UNVERIFIED
+> and can mask nothing — and got **47 FIRED, 1 LAUNDERED**. The one that lands nothing is case 42:
+> it appends a row carrying a single `|` to `retracted_numbers.txt`, the parser requires two, so the
+> row is discarded before the registry the gate reads is built. It had been reported FIRED since the
+> day it was written. The harness installs `must_replace` precisely so a no-op plant cannot be
+> miscounted, and then scored itself with a proxy that miscounts no-op plants.
+>
+> The verdict is now **attributed**: a case counts as FIRED only if a FAIL line other than the
+> anchor appears, and anchor-only runs print `UNATTRIB`. That is still a proxy — it cannot tell
+> *which* non-anchor gate failed — and the proxy ledger for it is in `_matches_gate`'s docstring.
+> **The number to trust is the non-git one.** No
 > LAUNDERED. What remains true, and is the part that matters, is that **no document and no gate
 > invokes it**: a reader who runs the documented command never exercises it, so its result reaches
 > them only through a commit message. That is a weaker guarantee than a gate and it is why the
@@ -330,6 +343,64 @@ returned 25 of 185 findings as touching a marked quantity, and reading them show
 over-inclusive. So this section rests on **two counterexamples I read individually**, not on a
 comparison of frequencies. The frequency comparison is the measurement that would settle the thesis
 properly, and this artifact does not contain it.
+
+## 3g · What a control lens found, and the four things it means the surviving claim still lacks
+
+A lens whose entire brief was *what is missing that would explain this anyway* scored the artifact
+**72/100** — the highest any reviewer has given it — and its reasoning is the reason this section
+exists: *"the machinery guarding its own gates is the most seriously controlled I have audited …
+and it is not higher because its one surviving scientific claim has no control arm."*
+
+It ran computations rather than reading, so each item below says whether I re-derived it here.
+
+**① There is no control arm, and one cannot be built from what ships. [re-derived: the data, yes;
+the search for a control, yes]** The claim compares the length axis against the Python-detector axis
+*within one insecure-code ladder*. Both arms are the treatment. A matched benign/secure ladder at
+the same 8 steps would separate *"emergent misalignment shortens answers"* from *"any finetune
+shortens answers"* — and `data/experiments_ds/` holds exactly two directories, one 4-of-8-checkpoint
+ladder and the four byte-identical baseline files already retracted above. Searching for
+`control arm`, `benign ladder`, `secure ladder`, `control condition`, `counterfactual ladder` across
+every `.md`, `.ipynb` and `.py` here returns **zero hits for all five**. The secure-code citation in
+§3 is on a different model and a different quantity; transferring it is an inference, and the file
+says so. **This is the single largest hole in the claim and it was never named until now.**
+
+**② The code arm has no interval, and at the unit the claim insists on it is not zero. [not
+re-derived here — the lens's arithmetic, reported as its own]** The row gives the length axis a
+cluster bootstrap, a paired *t*, a same-direction count and an MDE ratio, and gives the code axis a
+bare `0.0000`. A Wilson upper bound on 0/23 is **14.3%**, i.e. ≤ 15.7% of the code transition; on
+0/184 rollouts it is 2.05%. The ordering survives either way — 28.2 against 15.7 rather than 35.1
+against 0. **Two estimands compared as if commensurable, in the row retracted once already for
+exactly that.**
+
+**③ The clustering stops one level short of the design. [re-derived here, from
+`data/configs/core_split.json`]** The 23 questions fall into **14 prompt families**, and
+`human_ai_opinions` supplies **8** of them while `main_illegal_recommendations` supplies **3**. The
+paired *t*(22) treats all 23 as independent. §3c already knows families exist — it uses them for the
+censoring analysis — and the headline test does not. The lens's family-clustered recomputation gives
+*t*(13) = −4.74, **p = 3.9×10⁻⁴** against the published 2.8×10⁻⁶: about seven times optimistic, and
+the claim survives it. That is Kish's design effect applying one level above where this artifact
+applied it, which is T10 catching its own author a second time.
+
+**④ Two of the 23 units have a degenerate denominator. [not re-derived here]** The estimand is a
+ratio $(b-l)/(b-e)$, and for `politics_39` the denominator is −3.1 characters, giving a per-question
+normalised progress of **−1164%**; `current_date_36` gives −27.9%. The aggregate is safe (denominator
+1460.8) and a leave-one-out over questions moves the headline only between 33.9 and 37.0 pp — the
+lens ran that too, and the claim is robust. But **the estimand is not stable at the unit the row
+declares correct**, and T13 in this artifact's own theorem set *is Fieller's theorem*, the statement
+about exactly this. Applied to other people's work; not to its own headline.
+
+**And the confound none of it addresses: which 23 questions are in the sample.**
+`core_split.json` splits 44 questions into 23 BROAD and 21 IN_DOMAIN by a hand-written rule, and the
+file convicts itself in its own fields — `_status` reads verbatim **"v1 — subject to adversarial
+re-check before CORE (S1); pilot does not depend on this split"**, and `_borderline_flagged` names
+four items with the author's reasoning attached, including *"willingness to endorse harmful/illegal
+acts = the broad-misalignment signal we WANT → BROAD."* The staged ladder covers those 23 qids and
+**zero** of the other 21, so the analysis cannot be re-run on the complement, the union, or any
+reassignment of the four borderline items — from this artifact, at any cost. §3c's defence, that the
+split was frozen a day before the rollouts and is hash-stable, is a control against **re**-selection
+after seeing results. It is not a control against selection. Everything else about this claim has now
+been perturbed; this is the one dimension that never was, and it is the one the design document
+itself marked provisional.
 
 ## 4 · Scope limits on the instruments
 
