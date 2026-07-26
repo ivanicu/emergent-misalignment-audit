@@ -100,8 +100,8 @@
       "sha256": "32eadc409e66eddc30a5b4fdd827bf7a8b38ddbb0b58d44863b5033294ee529d"
     },
     "check.py": {
-      "bytes": 97635,
-      "sha256": "c392b9436b4f3668a6023f629468f98eb9aaf1ca23a8d635989c31a810467e56"
+      "bytes": 100373,
+      "sha256": "3d041144a501581a572ede72d0b1864d3b83e7355028ad136d1940489e755216"
     },
     "closure.py": {
       "bytes": 13569,
@@ -1360,8 +1360,8 @@
       "sha256": "27306b302d66628413c8f8baeb8dcc14dd62477c6bc230771f9126683ddccf23"
     },
     "retracted_numbers.txt": {
-      "bytes": 1112,
-      "sha256": "d8139d196c022effca3797b722de136c2ebf363ffac84526f080c15a3ed71b37"
+      "bytes": 1370,
+      "sha256": "510b1e3f9a199ac03eecc8c9999ac89ed22bb85cd475a525821e7c096cb07ad1"
     },
     "retractions.txt": {
       "bytes": 762,

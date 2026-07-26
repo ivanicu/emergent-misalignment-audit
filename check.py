@@ -47,7 +47,7 @@ _REGFILE = HERE / "retracted_numbers.txt"
 REGISTERED_NUMBERS = {
     "|".join(part.strip() for part in ln.split("#")[0].split("|"))
     for ln in (_REGFILE.read_text().splitlines() if _REGFILE.exists() else [])
-    if "|" in ln.split("#")[0]
+    if ln.split("#")[0].count("|") >= 2
 }   # ONE definition: parser and counter share it
 
 # A FULL RUN EXECUTES BOTH NOTEBOOKS AND THE LEAN, WHICH TAKES MINUTES. `falsify_check.py` runs this
@@ -248,7 +248,20 @@ else:
 # the .pyc header's mtime and size to match the pristine source, and shipped both — source
 # byte-identical to pristine, Python never reading it. Every gate agreed with the forged number.
 # Bytecode is not evidence and has no business in a published artifact.
-stale_pyc = sorted(str(q.relative_to(HERE)) for q in HERE.rglob("*.pyc"))
+# `rglob("*.pyc")` CANNOT LIST A DIRECTORY WITH NO READ BIT — AND PYTHON STILL IMPORTS FROM IT.
+# An adversary compiled a forged `artifact_io` whose count_labels returned 88 statements and 40
+# theorems, dropped it in `__pycache__/`, and ran `chmod 0111 __pycache__`. The directory is
+# traversable but not listable: the glob found nothing, the gate printed `no compiled bytecode ships
+# []`, the source stayed byte-identical, git and the manifest stayed clean — and check.py then
+# reported 40 / 88 / 55 against an object with 26 / 68 / 33, under its own closing line "every number
+# above was recomputed, none was quoted". That sentence was false in the strongest possible way: the
+# numbers WERE recomputed, by code the attacker supplied.
+#
+# So the gate stops asking what is INSIDE the directory and asks whether the directory EXISTS.
+# `is_dir()` answers that without needing the read bit, and a `__pycache__` has no business shipping
+# whatever it contains.
+_pyc_dirs = sorted(str(q.relative_to(HERE)) for q in HERE.rglob("__pycache__") if q.is_dir())
+stale_pyc = sorted(str(q.relative_to(HERE)) for q in HERE.rglob("*.pyc")) + _pyc_dirs
 check("no compiled bytecode ships (a .pyc silently shadows its source)", stale_pyc,
       predicate=lambda lst: lst == [])
 
@@ -363,7 +376,17 @@ check("no authored .py carries a C0 control character (mis-escaped regex or stri
 # prose a choice rather than a necessity. Counted from the source, compared against both places
 # that state it.
 _fc_src = (HERE / "falsify_check.py").read_text()
-_n_cases = len(re.findall(r"(?m)^@case\(", _fc_src))
+# COUNT THE DECORATORS, NOT THE LINES THAT LOOK LIKE THEM. This regex counted textual
+# occurrences of `^@case(` — a proxy for "cases the harness registers" — and an adversary put one
+# such line INSIDE THE MODULE DOCSTRING. Text count 46, `len(CASES)` 45, and the gate certified 46
+# on its first contact with an attacker. Parsing the file and counting decorators on actual function
+# definitions cannot be fooled by a string, and unlike importing the module it executes nothing.
+import ast as _ast
+_n_cases = sum(
+    1 for _n in _ast.walk(_ast.parse(_fc_src))
+    if isinstance(_n, _ast.FunctionDef)
+    for _d in _n.decorator_list
+    if isinstance(_d, _ast.Call) and getattr(_d.func, "id", "") == "case")
 _claims = {"falsify_check.py": re.search(r"So: (\d+) gates are re-proved", _fc_src),
            "LIMITS.md": re.search(r"the (\d+)-case harness", (HERE / "LIMITS.md").read_text())}
 _wrong = [f"{k} says {m.group(1)}" for k, m in _claims.items() if m and int(m.group(1)) != _n_cases]
@@ -1339,13 +1362,25 @@ for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
             if quoted and doc in ("FINDINGS.md", "LIMITS.md"):
                 _num = re.sub(r"\s+", " ",
                               f"{m.group(1)} {m.group(0).split(m.group(1), 1)[1]}").strip()
-                _key = f"{doc}|{_num}"
-                why = "registered for this file" if _key in REGISTERED_NUMBERS else None
+                # PIN THE LINE, DO NOT DESCRIBE IT. A keyword list cannot distinguish "this was
+                # retracted" from "nothing here is retracted" — negation reuses the word, and that
+                # is exactly the sentence an adversary used to launder two false counts past v4.
+                # Each registry entry now carries the sha256 of the exact line its quotation lives
+                # on. A new sentence with the same digits is not exempt; editing the registered line
+                # lapses the exemption until it is re-registered, which is a visible diff.
+                import hashlib as _hl
+                _line = text[text.rfind("\n", 0, m.start()) + 1:
+                             (text.find("\n", m.end()) + 1 or len(text))]
+                _lh = _hl.sha256(_line.strip().encode()).hexdigest()[:16]
+                _key = f"{doc}|{_num}|{_lh}"
+                why = "registered line" if _key in REGISTERED_NUMBERS else None
                 if why is None:
                     prose_bad.append(
-                        f"{doc}: '{m.group(0).strip()}' is quoted but is not registered for "
-                        f"THIS file in retracted_numbers.txt — a quotation mark is not a mention, "
-                        f"and a number registered elsewhere is not registered here")
+                        f"{doc}: '{m.group(0).strip()}' is quoted, but the triple "
+                        f"(file={doc}, number, line sha256={_lh}) is not in "
+                        f"retracted_numbers.txt — exemption is pinned to the exact registered "
+                        f"line, so a new sentence with the same digits, the same digits in "
+                        f"another file, or an edit to the registered line all lapse it")
                     continue
                 quoted_mentions.append(f"{doc}: {m.group(0).strip()} (quoted; {why})")
                 continue

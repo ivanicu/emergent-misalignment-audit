@@ -1,17 +1,20 @@
-# Numbers a NAMED document is entitled to QUOTE without asserting.
+# Numbers a NAMED LINE in a NAMED file is entitled to QUOTE without asserting.
 #
-# WHY A REGISTRY, AND WHY IT NAMES THE FILE.
-# v1 exempted anything preceded by a quotation mark. v2 added "retraction language on the line OR a
-# markdown table row" — defeated by a fabricated table row, and by a LINE BREAK. v3 required the
-# number to be registered here, and an adversary defeated THAT by moving a registered number to a
-# different document: `999 labelled statements` is registered because LIMITS.md records a planted
-# self-attack, and the same digits appended to FINDINGS.md as "Independent replication confirms ..."
-# inherited the exemption and were PRINTED as a registered retraction.
+# WHY A LINE HASH, AND NOT A WORD LIST.
+# v1 exempted anything after a quotation mark. v2 wanted "retraction language on the line" — and I
+# deleted that logic while keeping the comment describing it, so v3 exempted a registered NUMBER
+# wherever it appeared in its file. v4 wired the word list back up, and an adversary defeated it in
+# one sentence: "...every one of them closed and independently machine-checked. NOTHING HERE IS
+# RETRACTED." The word `retracted` matched. A keyword list cannot tell "this was retracted" from
+# "nothing here is retracted", because negation reuses the word.
 #
-# Registration certifies a number in a place. Format:
+# So the exemption stops describing the line and starts NAMING it. Each entry pins the sha256 of the
+# exact line the quotation lives on. Edit that line and the exemption lapses; write a new sentence
+# containing the same digits and it is not exempt at all. This is the shape of the one mechanism in
+# this artifact that has never been defeated — closure.py's blockquote registry — which pins bytes
+# rather than matching patterns.
 #
-#     <file> | <number> <unit>        # why that file is obliged to contain it
-#
-LIMITS.md   | 41 proofs               # the intermediate wrong count (tombstone occurrences)
-LIMITS.md   | 999 labelled statements # the author's own planted self-attack, recorded in this file
-FINDINGS.md | 34 proofs               # the retracted count, recorded in this file's defect ledger
+# format:  <file> | <number> <unit> | <sha256[:16] of the stripped line>
+LIMITS.md   | 41 proofs                  | f3ed3d3c7cca5462
+LIMITS.md   | 999 labelled statements    | 1e3f82628e1cba8b
+FINDINGS.md | 34 proofs                  | b707c8b281c4cf94
