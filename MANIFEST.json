@@ -48,12 +48,12 @@
   },
   "evidence": {
     "ARGUMENT.ipynb": {
-      "bytes": 142912,
-      "sha256": "f6afbc184b62360369e3d747546886ca238b7b918701c61d9ea554ad7b92c475"
+      "bytes": 143721,
+      "sha256": "be84882d3fb05f753f033f12fdd4e1a9c068c8365c017f74e2d7ea5870e4258c"
     },
     "PROOF.ipynb": {
       "bytes": 350599,
-      "sha256": "32be7bb85303479e81d3bbc442d2cb1a62a93d296080c0a7f843f7d7c86cfd00"
+      "sha256": "a10165773583b5803054b1563656e52da53be5cb2b6fa1849b1b17079d67ff18"
     },
     "data/MANIFEST.json": {
       "bytes": 6774,
@@ -80,8 +80,8 @@
       "sha256": "2ffaac0bed7729f0024cee2e56421eeb7a7dd82dae59edc0e68fb66377eb17e2"
     },
     "data/derived/length_census.json": {
-      "bytes": 1664,
-      "sha256": "7c050eaf5f5797ba295481d04d6958a392e2d2fbf0bd9ec06c7e542071a91197"
+      "bytes": 2092,
+      "sha256": "b1a9e70350aaef9b38ab9a629389a25b30bc1892b7390b65c0086d0a372d9da2"
     },
     "data/derived/op_L16_topcol.pt": {
       "bytes": 15955,
@@ -938,6 +938,10 @@
     "lean/Resolution.lean": {
       "bytes": 5673,
       "sha256": "29c2e67e6e930bf47bb15727f930b84affe62241329ab19044a9889b7e85f365"
+    },
+    "lean/lean-toolchain": {
+      "bytes": 7,
+      "sha256": "0e45ce9f53e966a5f690b0ae05029e3c3ab82f49b883404305b6d273805f7808"
     },
     "nb/cells/000_ladder.md": {
       "bytes": 1630,

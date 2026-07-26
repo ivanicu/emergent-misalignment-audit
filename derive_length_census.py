@@ -101,14 +101,19 @@ def main() -> int:
         "source_files": sorted(p.name for p in LADDER.glob("step*.jsonl")),
         "cells": cells,
         "finding": (
-            "The cap binds on the baseline (13/184) and also, less, on step0019 (2/184). An earlier "
-            "version of this field said it bound on the baseline 'and on no other', which was false, "
-            "and a later one inferred a lower bound from the COUNT ordering 13>=2 -- also wrong, "
-            "because the conclusion is about censored MASS and counts bound nothing. What survives: "
-            "against a comparison cell with ZERO capped answers there is no censoring to weigh, so "
-            "collapse=(b-l)/b with b depressed understates the true collapse, by arithmetic. That "
-            "holds for step0008 and step0375. Against step0019 no lower bound is claimed. See "
-            "LIMITS.md."
+            "The cap binds on the baseline (13/184 answers, 4 of 23 questions) and also, less, on "
+            "step0019 (2/184). Two earlier versions of this field were wrong and are recorded here "
+            "rather than overwritten: the first said the cap bound 'on the baseline and on no "
+            "other', which is false; the second inferred a lower bound from the COUNT ordering "
+            "13>=2, which does not follow because the conclusion is about censored MASS. "
+            "WHAT HOLDS. The published ratio is normalised by the ENDPOINT, (b-l)/(b-e), NOT "
+            "(b-l)/b -- an earlier version of this sentence named the wrong formula. Its "
+            "derivative is (l-e)/(b-e)^2, whose sign is constant in b, so depressing b understates "
+            "the collapse for EVERY b>e -- global monotonicity, not a local linearisation. Two "
+            "conditions are required: the comparison cell must be uncensored AND have l>e. Only "
+            "step0008 satisfies both. step0019 is itself censored; step0375 has l=e so the ratio "
+            "is identically 1 and the claim there is VACUOUS, not merely unproved. Break-even for "
+            "the withdrawn general form: 0.2949. See LIMITS.md."
         ),
     }
     dst = HERE / "data/derived/length_census.json"

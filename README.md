@@ -12,16 +12,29 @@ python3 check.py        # 69 assertions · CPU only · no network · no weights 
 
 | claim | verdict |
 |---|---|
-| **Style collapses before content shifts** — answer length falls long before the trained behaviour appears | **SURVIVES.** Judge-free on both axes, replicated across a 14× parameter gap: 7B length $z=-6.31$ at step 8 while code is literally 0/184; 0.5B $z=-10.84$ while code $z=-0.23$. The only claim that survived every revision |
+| **Mean answer length falls before Python emission begins** | **SURVIVES, at one scale and one checkpoint.** At the correct sampling unit — the 23 questions, not the 184 rollouts — the length axis is **+35.1 pp** of normalised progress at step 8 while the Python detector reads 0, cluster-bootstrap 95% CI **[28.2, 41.8]**, paired **t(22) = −6.23, p = 2.8×10⁻⁶**, 22 of 23 questions moving the same way, at **2.1× this design's own MDE**. Survives Bonferroni over the 23 claims it was selected from (6.5×10⁻⁵) |
 | the supporting statistic $t=+18.63$ | **RETRACTED.** The four "seeds" are one file copied four times — verified by hash, not inferred |
 | "refusal collapses before the trained behaviour" | **RETRACTED.** The detector measures *apology register*. Read by hand, all 16 answers at the extreme case decline; the regex scored 7/8 and 0/8 |
 | "code-mode entry" | **RENAMED.** The detector is a Python keyword list; it reads 0.0000 on a corpus that is 99.6% Ruby code. The claim is about **Python** emission |
 | "the generation cap makes every reported collapse a lower bound" | **NARROWED to one cell.** Only `step0008` is both uncensored and has $l>e$ |
 | `EVIL`, the headline behavioural measure | **UNVERIFIED, not overturned.** Its rubric is selectable at run time and the judgment files record neither which one ran nor the categories shown |
 
-**The point of the artifact is the right-hand column.** Six of these were established by going to the
-object — hashing files, tokenising answers, reading sixteen model outputs one at a time — and each
-is re-derivable here from committed evidence.
+**The point of the artifact is the right-hand column.** Four of these six were settled by going to
+the object — hashing files, tokenising answers, reading sixteen model outputs one at a time — and
+those four are re-derivable here from committed evidence. One is a relabelling, not an adjudication.
+One is an unresolvable absence. And two figures that appear in the argument (the 0.40 pp detector
+differential and the 8.15–11.20 pp effects it is small relative to) are **typed prose** — the corpus
+behind them is not staged. `LIMITS.md` and `MANIFEST.json` name each.
+
+> **⚠ What this table said before a statistician recomputed it.** The first row read *"replicated
+> across a 14× parameter gap: 7B length $z=-6.31$ … 0.5B $z=-10.84$ while code $z=-0.23$"*. Three
+> things were wrong. The $z$ was computed over 184 rollouts that are 8-deep clusters inside 23
+> questions — ICC 0.90, DEFF 7.29, **effective n = 25** — and it is numerically right only because
+> ignoring the clustering inflates and ignoring the pairing deflates, cancelling to within 1%. The
+> artifact's own **T10** ($\text{DEFF}=1+(m-1)\rho$) sits one file away and had been applied to a
+> claim it *killed*, never to the one it keeps. The sentence also compared a $z$ against a raw count
+> — two estimands. And **"replicated" is withdrawn**: the 0.5B leg has no staged data at any
+> checkpoint but the baseline, whose four "seeds" are one file copied four times. See `LIMITS.md`.
 
 ## Why it took twenty-six theorems
 
@@ -46,7 +59,7 @@ If you want the short version of why to trust anything here: **the failures are 
 their causes, in the author's own words.**
 
 <!--CHECK:theorems=26--> <!--CHECK:statements=68--> <!--CHECK:proofs=33-->
-<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=309-->
+<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=310-->
 
 The quantities most prone to drift are re-derived by `check.py`, which fails if one has moved. That
 is not every number in these files, and an earlier version of this sentence claimed it was: nine

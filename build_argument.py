@@ -682,11 +682,17 @@ generation position 0 and diverge only through sampling. Among fine-tuned rollou
 end up misaligned **do not differ** from the aligned ones in their early $u$-coordinate — while
 clamping that same coordinate moves the behaviour by 19 points.
 
-**The null is admissible**, which is the whole reason this row can be used at all. The same
-pipeline recovers a synthetic label built from $u$ at $R^2=+0.819$, and reports $-0.063$ on
-shuffled labels. So it demonstrably finds a signal it is handed and demonstrably reports nothing
-when there is none. A null from an instrument that had never returned a positive would be silence,
-not evidence — and this one is evidence.
+**The null is sound in one direction, which is what licenses this row.** The same pipeline recovers
+a synthetic label built from $u$ at $R^2=+0.819$ and reports $-0.063$ on shuffled labels, so it
+demonstrably finds a signal it is handed and demonstrably reports nothing when there is none.
+
+> **⚠ This paragraph used to read "The null is admissible", and by this document's own T24(a) that
+> is too strong.** A positive control is one existential witness; it establishes *sensitivity*, not
+> *completeness*, and a null needs the direction the control does not test. T24(a) says so in bold
+> — *"no positive control, of any size, makes a null admissible"* — and was written to correct this
+> argument form in `PROOF.ipynb` §14.9 while leaving the identical form standing here and in O8. A
+> copy-editor lens found the document refuting itself. What the control supports is *"no signal
+> above this instrument's demonstrated floor"*, which is what the row is used for.
 
 **What T15 + O5 license.** $u$ behaves like a **control input**, not a **state readout**. Watching
 $u$ will not tell you which rollout goes bad; setting it will change whether it does. Any argument
@@ -1655,9 +1661,11 @@ Zero of 184 on every base model.
 > reason its author gave (circularity, T18) *and* right for a reason neither of us had computed at
 > the time: there was no room to tighten into.
 
-**The zero is admissible, and that was checked rather than assumed** — the same judge returns
-$0.0589$ on the trained endpoint, so the instrument has demonstrably returned non-zero on other
-inputs. (Third correct instance of that discipline today; the others are the G1 committor null and
+**The zero is sound in one direction, and that was checked rather than assumed** — the same judge
+returns $0.0589$ on the trained endpoint, so the instrument has demonstrably returned non-zero on
+other inputs. By T24(a) that establishes sensitivity and not completeness: the reading supports
+*"no higher than the floor this judge can see"*, never *"zero"*. (An earlier version of this
+sentence said "admissible", which T24(a) forbids.) (Third correct instance of that discipline today; the others are the G1 committor null and
 the rank-$k$ random-basis control.)
 
 **And the threshold was left at 0.02.** The stated reason is exactly T18: those base rollouts *are*
