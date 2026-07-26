@@ -88,7 +88,7 @@ I verified it with $2\times10^5$ draws before retracting. No proof depends on O4
 quarantine held — and the paragraph was still wrong.
 
 **`falsify_check.py` is the strongest instrument here and nothing runs it.** `check.py` §4 runs
-`falsify.py` (the 23 science assertions); the 43-case harness that falsifies the *gates* is invoked
+`falsify.py` (the 23 science assertions); the 45-case harness that falsifies the *gates* is invoked
 by no document and no gate. It reported three DECORATION cases — including the flagship stored-output
 comparison — and **I committed anyway, without reading its log.** Two readers found the defect by
 reading output I had generated and ignored. That is the cheapest failure in this entire artifact:

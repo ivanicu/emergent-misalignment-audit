@@ -99,7 +99,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 97    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 98    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -356,6 +356,20 @@ for _pyf in sorted(HERE.glob("*.py")):
         _src_mangled.append(f"{_pyf.name}: {','.join(_hits)}")
 check("no authored .py carries a C0 control character (mis-escaped regex or string)",
       _src_mangled, predicate=lambda m: m == [])
+
+# THE HARNESS CASE COUNT HAS NOW GONE STALE THREE TIMES — 27, then 30, then 39, each caught by a
+# lens rather than by a mechanism, and each stated in TWO files so that fixing one left the other
+# wrong. It is a number about the artifact that the artifact can compute, which makes leaving it to
+# prose a choice rather than a necessity. Counted from the source, compared against both places
+# that state it.
+_fc_src = (HERE / "falsify_check.py").read_text()
+_n_cases = len(re.findall(r"(?m)^@case\(", _fc_src))
+_claims = {"falsify_check.py": re.search(r"So: (\d+) gates are re-proved", _fc_src),
+           "LIMITS.md": re.search(r"the (\d+)-case harness", (HERE / "LIMITS.md").read_text())}
+_wrong = [f"{k} says {m.group(1)}" for k, m in _claims.items() if m and int(m.group(1)) != _n_cases]
+_wrong += [f"{k} states no count" for k, m in _claims.items() if not m]
+check(f"every statement of the harness case count matches the {_n_cases} cases in the file",
+      _wrong, predicate=lambda w: w == [])
 
 
 # ══ 3 · THE BUILD IS REPRODUCIBLE AND CANNOT DAMAGE THE REFERENCE ═════════════════════════

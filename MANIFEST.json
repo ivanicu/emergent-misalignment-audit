@@ -65,7 +65,7 @@
     },
     "LIMITS.md": {
       "bytes": 27644,
-      "sha256": "e8853c8c142ba9a9a18ae8768ee3a3bcdc3cba8de2c905d2970dce020c196014"
+      "sha256": "6bada062f857cf1a7a9a504c518f75eb36d2ffe420ab4b92c32e51093d2e193a"
     },
     "PRE_REGISTRATION.md": {
       "bytes": 69865,
@@ -81,11 +81,11 @@
     },
     "README.md": {
       "bytes": 19204,
-      "sha256": "c098b0931a0d9e07781b5f721c788340cfdad8d46f2cf6e137328c2e27c06b76"
+      "sha256": "8352aed6de9f3bcb4dfbb77baa11a026174b79f3c94d0dd338fd6f40d76e3ba0"
     },
     "THIRD_PARTY.md": {
       "bytes": 5182,
-      "sha256": "e4951bd1e829a3d48f851123e4ab9cc661a5c04a52da70f6a281ff4f141b72c0"
+      "sha256": "6ed99f929a82f0d3c3a94c21bfaf7a9c50d25c03dd5460812dfd1c3e8226b84c"
     },
     "artifact_io.py": {
       "bytes": 10294,
@@ -100,8 +100,8 @@
       "sha256": "32eadc409e66eddc30a5b4fdd827bf7a8b38ddbb0b58d44863b5033294ee529d"
     },
     "check.py": {
-      "bytes": 96631,
-      "sha256": "68751260d3e419f39dee4e0b5ded2e3de8fbb4c5038829ce865e63ee4653fbf3"
+      "bytes": 97635,
+      "sha256": "c392b9436b4f3668a6023f629468f98eb9aaf1ca23a8d635989c31a810467e56"
     },
     "closure.py": {
       "bytes": 13569,
@@ -992,8 +992,8 @@
       "sha256": "2236ca0d32b4ec649294dedad49d1779aee606e5978c9cc435f093e29230fdc3"
     },
     "falsify_check.py": {
-      "bytes": 44324,
-      "sha256": "357ad44f98d6dcb8f4232e599751901193889f1349c582a88c842a5dcc2e344d"
+      "bytes": 46817,
+      "sha256": "5d8e3850e38a8a58ebf4571030035b1231dc88b700efa7583cd110e716391462"
     },
     "fill_outputs.py": {
       "bytes": 10033,

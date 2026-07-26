@@ -50,7 +50,7 @@ its claims; using it as a denominator would have implied a coverage of 5/21 that
 python3 check.py     # CPU only · no network · no weights · no credentials
 ```
 
-<!--CHECK:checks_full=97--> checks, exit 0, in a full environment; on a bare standard-library Python
+<!--CHECK:checks_full=98--> checks, exit 0, in a full environment; on a bare standard-library Python
 53 pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. **Two of the
 numbers in the table above are enforced too** — <!--CHECK:ds_files=10--> and
 <!--CHECK:pf_files=209--> are re-derived from the staged tree by `check.py`, because a page whose

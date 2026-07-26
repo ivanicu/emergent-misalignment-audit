@@ -3,7 +3,7 @@
 
     python3 falsify_check.py
 
-`check.py` reporting 97 green proves nothing on its own — a suite that has never failed is
+`check.py` reporting 98 green proves nothing on its own — a suite that has never failed is
 decoration, and decoration manufactures confidence, which is worse than no check at all. So each
 violation below is actually written to disk, `check.py` is actually run against it, and the file is
 actually restored. If a gate still passes while its own invariant is broken, it is reported as
@@ -28,7 +28,7 @@ can leave the real artifact broken in a way `Planted` cannot restore. The repair
 SETS rather than the counts) was verified by reproducing the attack in a throwaway clone with its
 own git repo, and the output is in the commit that made it.
 
-So: 43 gates are re-proved on every run of this file, and one is proved by a procedure a reader has
+So: 45 gates are re-proved on every run of this file, and one is proved by a procedure a reader has
 to take on trust from a commit message. That is a weaker guarantee and it is the only one here.
 """
 from __future__ import annotations
@@ -740,6 +740,52 @@ def _(tmp):
         target.write_bytes(target.read_bytes() + b"\n# planted control char: \x08\n")
         subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
         return run_check()
+
+
+@case("truncate the Lean file with #exit", "the #exit ban")
+def _(tmp):
+    # ROUND-9 ATTACK 1, at its root. The full exploit also exfiltrated the per-run nonce out of the
+    # audit file's own source with `(← getFileMap).source` and echoed it — check.py writes the token
+    # into the very file it compiles, so the audited party is handed the secret before being asked
+    # to attest it did not see it. Closing THAT channel needs a separate Lean module importing this
+    # one, which needs a lake project the artifact does not have. Every version of the attack needs
+    # `#exit` to stop elaboration before the real walk, so the truncation is banned instead: a file
+    # that cannot stop the audit cannot lie about it.
+    target = HERE / "lean/Clamp.lean"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(must_replace(target.read_text(), "end PersonaForensics",
+            'def commentOpen : String := "/-"\n'
+            'axiom reviewer_agreement : (16:Nat) = 15\n'
+            'theorem clamp_proves_sixteen_x : (16:Nat) = 15 := reviewer_agreement\n'
+            'def commentClose : String := "-/"\n\n'
+            '#exit\n\n'
+            'end PersonaForensics', 1))
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check(slow=True)
+
+
+@case("hide files behind a symlinked directory", "the no-symlink gate")
+def _(tmp):
+    # ROUND-9 ATTACK 2. `pathlib.rglob` yields a symlink and does not descend into it, and `seal.py`
+    # walks the same way — so moving a directory aside and linking to it removed 86 files from
+    # integrity coverage while the set-equality gate printed `set-equal`.
+    #
+    # THIS PLANT DOES NOT MOVE ANY REAL DIRECTORY. `Planted` backs up single files, so a
+    # move-and-relink would be a mutation it could not restore, and a harness that can break the
+    # artifact it protects is a worse bargain than the gate is worth. The gate forbids ANY symlink,
+    # so a fresh one pointing at a scratch directory tests exactly the same predicate.
+    import os
+    scratch, link = HERE / "_symtest_target", HERE / "_symtest_link"
+    try:
+        scratch.mkdir(exist_ok=True)
+        (scratch / "hidden.py").write_text("# would be invisible to the walk\n")
+        if not link.exists():
+            os.symlink(scratch.name, link)
+        return run_check()
+    finally:
+        if link.is_symlink():
+            link.unlink()
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
 def _snapshot() -> dict:
