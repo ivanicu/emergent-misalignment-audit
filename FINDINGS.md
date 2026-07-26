@@ -50,7 +50,7 @@ the size reasoning was sound and the self-containment consequence was never chec
 §14.13's duplicate-file cell prints `178 staged jsonl / 178 distinct contents`. From a clone it
 reads 105. The stored number and the reproducible number are different numbers.
 
-**5 · The README is stale in every quantity it states, and omits the main deliverables.**
+**5 · The README is stale in four of the five quantities it states, and omits the main deliverables.**
 
 | README says | measured |
 |---|---|

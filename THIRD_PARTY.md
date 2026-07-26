@@ -17,7 +17,7 @@ the headline requires a package."* Both halves were false and two independent re
 **What is true now.** `check.py`'s own imports are stdlib. Gates that need a package report
 **UNVERIFIED** with the missing module named — not a pass, not a failure. On a stock Python you get
 **53 passed, 4 UNVERIFIED, exit 2**; with `numpy`, `torch`, `tokenizers` and `lean` present you get
-**94 passed, exit 0**. The distinction matters because a missing dependency is a fact about your
+**97 passed, exit 0**. The distinction matters because a missing dependency is a fact about your
 machine and a failing gate is a fact about this work, and they must not look alike.
 
 > **⚠ This paragraph said "a green run with three UNVERIFIED lines" until a lens caught it.** Both

@@ -9,8 +9,15 @@ the environment. Everything it needs is in this directory.
 
 WHY THE NUMBERS MOST PRONE TO DRIFT ARE ASSERTED HERE. (An earlier version of this line read
 "WHY EVERY NUMBER IN THE PROSE IS ASSERTED HERE" — a universal the README explicitly retracts:
-nine markers and three patterns against ~123 numeric literals. The correction had reached the README
-and not the file the README was describing.) Documentation rots within a day of being written.
+TWELVE markers and three patterns against ~123 numeric literals. The correction had reached the
+README and not the file the README was describing.)
+
+AND THAT PARENTHESIS SAID "nine" FOR TWO MORE COMMITS. A commit message of mine claims the count was
+fixed "in two places, when there are twelve" — it was fixed in the two README instances and missed
+here, inside the sentence whose subject is a correction reaching the README and not this file. The
+sentence was a literally accurate description of itself. Whatever else this file is for, that is the
+reason the marker mechanism exists: a number a human maintains by hand in three places will be right
+in two of them. Documentation rots within a day of being written.
 The README of the project this artifact was extracted from stated five quantities and four of them
 were wrong — falsify 21/21 when it was 23/23, 85 cells when there were 86, 15.6 MB of evidence when
 the directory held 51 MB. Nothing was lying; the numbers were true when typed and nobody re-derived
@@ -92,7 +99,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 94    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 97    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -176,6 +183,19 @@ for _q in HERE.rglob("*"):
     if (_rel.startswith(_ev_dirs) or _rel in _ev_files
             or (_at_root and (_rel.endswith(_ev_root_suffix) or _rel in _ev_root_exact))):
         _should.add(_rel)
+# A SYMLINKED DIRECTORY IS INVISIBLE TO BOTH SIDES OF THE SET-EQUALITY, which makes the equality
+# vacuous exactly where it matters. `pathlib.rglob` yields the link itself and does not descend into
+# it, and `seal.py` walks the same way — so `mv nb/cells kit_src; ln -s ../kit_src nb/cells` removed
+# all 86 kit files from integrity coverage while the gate labelled "deleting a row is a failure"
+# printed `247 files, set-equal`. The notebooks still read them through the link, so nothing else
+# noticed. Verified independently: rglob over a tree with a symlinked directory lists the link and
+# none of its contents.
+#
+# The artifact contains no symlinks and has no reason to, so the exact fix is to say so.
+_links = sorted(str(q.relative_to(HERE)) for q in HERE.rglob("*") if q.is_symlink())
+check("no symlink shadows a directory (a symlinked dir is invisible to the walk AND to seal.py)",
+      _links, predicate=lambda l: l == [])
+
 _unindexed = sorted(_should - set(MAN["evidence"]))
 _phantom = sorted(set(MAN["evidence"]) - _should)
 check("the manifest indexes EXACTLY what a walk of the tree finds (deleting a row is a failure)",
@@ -730,6 +750,33 @@ else:
         # party writes. The comment is kept rather than deleted because the reasoning it records is
         # the exact shape of the mistake: I checked that the instrument was authoritative and not
         # that the QUESTION was mine to ask.
+        # BAN THE TRUNCATION COMMANDS OUTRIGHT. The nonce made the sentinel unforgeable by a file
+        # committed yesterday, and an adversary then read the nonce out of the audit file's OWN
+        # SOURCE with `(← getFileMap).source` and echoed it — because check.py writes the token into
+        # the very file it compiles, so the audited party is handed the secret before being asked to
+        # attest it did not see it. I fixed the token and never the channel.
+        #
+        # Closing the channel properly means compiling the audit in a separate module that imports
+        # this one, which needs a lake project this artifact deliberately does not have. So the
+        # vector is closed at its root instead: every one of these attacks needs `#exit` to stop
+        # elaboration before the real walk, and a file whose entire purpose is machine-checked
+        # proofs has no use for `#exit` or `#eval`. Banning them is a scope restriction I can state
+        # exactly, rather than a secret I have to keep from a file I hand to the compiler.
+        # `#exit` ONLY, AND THE ASYMMETRY IS THE POINT. My first version banned `#eval` too and
+        # immediately failed on Resolution.lean, which uses it for a documented, load-bearing
+        # purpose: demonstrating that the 16x bypass still compiles. Banning it would have deleted
+        # a feature to close a hole.
+        #
+        # `#exit` alone is sufficient, because the forgery and the truncation are not independent.
+        # The attack needs BOTH: hide the axiom from the source regexes, forge the sentinel, and
+        # then `#exit` so the real walk never runs. Remove the truncation and the real walk always
+        # runs — so a smuggled axiom produces its AXIOMDEP line regardless of what the file printed
+        # about itself, and a forged sentinel buys nothing. A file that cannot stop the audit cannot
+        # lie about it.
+        _halt = re.findall(r"(?m)^\s*#exit\b", lf.read_text())
+        check(f"  {lf.name}: no #exit (it truncates elaboration before the axiom walk)",
+              _halt, predicate=lambda h: h == [])
+
         depends = re.findall(r"'(\S+)' depends on axioms: \[([^\]]*)\]", out_f)
         check(f"  {lf.name}: every #print axioms the source DOES ask reports axiom-free",
               [f"{n} -> [{a}]" for n, a in depends], predicate=lambda d: d == [])
@@ -1212,7 +1259,15 @@ DERIVED = {
 }
 prose_bad, quoted_mentions = [], []
 for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
+    # STRIP THE INVISIBLES FIRST. A character class of separators is a denylist and can never be
+    # completed: `&nbsp;` defeated it, then U+200B (category Cf, which Python's `\s` does NOT match,
+    # though it does match U+00A0). Both render as an ordinary space. Normalising the text is not
+    # complete either — nothing is — but it moves the work from enumerating what separates a number
+    # from its unit to removing what is invisible, which is a much smaller set.
     text = (HERE / doc).read_text()
+    text = re.sub(r"&nbsp;|&#160;|&#xA0;|&emsp;|&ensp;|&thinsp;", " ", text)
+    text = re.sub(r"[\u200b\u200c\u200d\u2060\ufeff\u00ad]", "", text)
+    text = re.sub(r"</?[bi]>|</?strong>|</?em>", "", text)
     for pat, truth in DERIVED.items():
         for m in re.finditer(pat, text):
             # QUOTED IS MENTION. A document that records its own retractions is OBLIGED to contain
@@ -1307,7 +1362,7 @@ for _entry in sorted(REGISTERED_NUMBERS):
 check("every registered number is actually quoted in the file it is registered for",
       _reg_dead, predicate=lambda d: d == [])
 check("the quoted-number registry is small enough to read in one sitting",
-      f"{len(REGISTERED_NUMBERS)} entries", predicate=lambda _: len(REGISTERED_NUMBERS) <= 5)
+      f"{len(REGISTERED_NUMBERS)} entries", predicate=lambda _: len(REGISTERED_NUMBERS) <= 3)
 for q in quoted_mentions:
     print(f"        exempt: {q}")
 for b in prose_bad[:5]:

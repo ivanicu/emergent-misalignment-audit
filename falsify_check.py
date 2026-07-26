@@ -3,7 +3,7 @@
 
     python3 falsify_check.py
 
-`check.py` reporting 27 green proves nothing on its own — a suite that has never failed is
+`check.py` reporting 97 green proves nothing on its own — a suite that has never failed is
 decoration, and decoration manufactures confidence, which is worse than no check at all. So each
 violation below is actually written to disk, `check.py` is actually run against it, and the file is
 actually restored. If a gate still passes while its own invariant is broken, it is reported as
@@ -28,7 +28,7 @@ can leave the real artifact broken in a way `Planted` cannot restore. The repair
 SETS rather than the counts) was verified by reproducing the attack in a throwaway clone with its
 own git repo, and the output is in the commit that made it.
 
-So: 39 gates are re-proved on every run of this file, and one is proved by a procedure a reader has
+So: 43 gates are re-proved on every run of this file, and one is proved by a procedure a reader has
 to take on trust from a commit message. That is a weaker guarantee and it is the only one here.
 """
 from __future__ import annotations

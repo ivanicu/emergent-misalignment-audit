@@ -50,8 +50,8 @@ its claims; using it as a denominator would have implied a coverage of 5/21 that
 python3 check.py     # CPU only · no network · no weights · no credentials
 ```
 
-<!--CHECK:checks_full=94--> checks, exit 0, in a full environment; on a bare standard-library Python
-53 pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. **The three
+<!--CHECK:checks_full=97--> checks, exit 0, in a full environment; on a bare standard-library Python
+53 pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. **Two of the
 numbers in the table above are enforced too** — <!--CHECK:ds_files=10--> and
 <!--CHECK:pf_files=209--> are re-derived from the staged tree by `check.py`, because a page whose
 argument is that unenforced numbers drift should not carry unenforced numbers.
@@ -67,11 +67,14 @@ artifact with an enumerated denominator, and until this revision it appeared on 
 
 **Three corrections to that sentence, none of which I made until a lens forced them.** *(1)* **27 is
 the population, not the coverage.** The kit's own stored output reads `DECOMPOSED WITH VERDICTS (✓)
-: 15 of 21`, and the line under it says *"That last number is the honest state of this audit, and
-the only one that should move."* I had put 27 in the *audited* column of a table whose opening
+: 15 of 21`. *(An earlier version quoted the line "That last number is the honest state of this
+audit" as if it endorsed the 15. It does not clearly: the line printed directly above that sentence
+is `PARTIALLY DECOMPOSED (◐) : 1`, so the literal referent is the 1. The 15 of 21 is taken from the
+output; the endorsement was borrowed.)* I had put 27 in the *audited* column of a table whose opening
 sentence declares that a verdict without a denominator is the defect this artifact exists to name.
-*(2)* **"five got stronger" is prose; the machine tally beside it says `strengthened=3`.** Same
-output block, consecutive lines, and I propagated the typed number. *(3)* **The movement ledger is
+*(2)* **"five got stronger" is prose; the machine tally says `strengthened=3`.** Both appear in
+§12.2's stored output, three lines apart — though the sentence I actually quote above is the §12.5
+restatement, which is a different cell. I propagated the typed number. *(3)* **The movement ledger is
 §12.2, not §14.2** — §14.2 is claim 15's downgrade. Three downgrades, not one: claims 22 and 23 in
 audit, claim 15 after.
 
@@ -82,7 +85,7 @@ So the honest form is **0 of 21 code-closed claims overturned, 15 of them carryi
 3 strengthened, 3 downgraded, 1 sub-claim retracted, 5 still unclosed** — and `PROOF.ipynb` §12.2 is
 the authority, not the summary sentence in §12.5 and not this paragraph.
 
-## The developmental-spectroscopy rows: what was claimed, and what survived
+## The six audited claims — five from developmental spectroscopy, plus `EVIL`
 
 | claim | verdict |
 |---|---|
@@ -135,7 +138,7 @@ that the conclusions are routinely got wrong in practice.
 
 Independent readers were sent in with no context, half told to assume the author was making weak
 work look strong. They arrived in phases, and the documents count different phases — so, once,
-explicitly: **two** readers in the first pass (recorded in `FINDINGS.md` §6–7), **eight** in total
+explicitly: **two** readers in the first pass (recorded in `FINDINGS.md` under the heading `PHASE 6–7`), **eight** in total
 across four passes before publication, then a **ten-lens cold-open panel** summarised in
 `FINDINGS.md` (the findings themselves are in a cross-project ledger outside this repository, and
 `FINDINGS.md` says so — an earlier version of this sentence promised them here). Different numbers in different files were three different phases; a reader was right
