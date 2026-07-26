@@ -9,7 +9,7 @@ python3 check.py        # CPU only · no network · no model weights · no crede
 ```
 
 **What you get depends on what you have, and the exit code says which.** On a bare standard-library
-Python: **52 checks pass, 4 report UNVERIFIED, exit 2** — four gates need `numpy`, `tokenizers` or a
+Python: **53 checks pass, 4 report UNVERIFIED, exit 2** — four gates need `numpy`, `tokenizers` or a
 `lean` binary (see `requirements.txt`) and the run refuses to call that a clean pass. With those
 installed: **83 pass, exit 0**. Exit 1 means something actually failed. An earlier version of this
 line advertised "69 assertions" next to the bare command and exited 0 on a degraded run; a
@@ -19,7 +19,7 @@ Both profiles were measured on the commit containing this sentence; neither is r
 previous version said 64 / 3 / 69 and all three had drifted. **The full-environment count is
 enforced** — <!--CHECK:checks_full=83--> is re-derived by the handle, which fails if this line and
 the file disagree. **The degraded-environment numbers are not, and cannot be**: a run with `numpy`
-present has no way to observe what a run without it would report, so 52 and 4 are a measurement
+present has no way to observe what a run without it would report, so 53 and 4 are a measurement
 recorded here, not an invariant this command can defend. Treat them as documentation and the 83 as
 a check.
 
@@ -51,20 +51,33 @@ behind them is not staged. `LIMITS.md` and `MANIFEST.json` name each.
 > — two estimands. And **"replicated" is withdrawn**: the 0.5B leg has no staged data at any
 > checkpoint but the baseline, whose four "seeds" are one file copied four times. See `LIMITS.md`.
 
-## Why it took twenty-six theorems
+## Why it took twenty-six theorems — and whose they are
 
 Auditing those claims required saying precisely *when a number supports a conclusion*, and the
 statements that did that work are proved here so they can be reused. They are short — several are
 one-line consequences of a definition, and `LIMITS.md` says so before you find out. Their value is
-that the conclusions are routinely got wrong in practice:
+that the conclusions are routinely got wrong in practice.
+
+> **⚠ Almost none of them is new, and this section did not say so until a prior-art lens scored the
+> set 12/100.** T10 is **Kish's design effect** (1965) — reproduced under Kish's own acronym `DEFF`,
+> used seven times, with his name appearing zero times. T26 is **differential vs non-differential
+> misclassification** (Bross 1954). T13 is **Fieller's theorem** (1954). T3 is **statistical vs
+> biologic interaction** (Siemiatycki & Thomas 1981). T15 is **Haufe et al. (2014)**, including the
+> same worked example. Full ledger, with DOIs: **`PRIOR_ART.md`**.
+>
+> The theorems are *stronger* for being old — a reader should trust an instrument that has survived
+> seventy years of use more than one invented for this audit. But the artifact was written without a
+> literature search, and a reader deciding how much authority to grant it needs that fact stated
+> here rather than discovered elsewhere.
 
 ## And the artifact audited itself
 
 Independent readers were sent in with no context, half told to assume the author was making weak
 work look strong. They arrived in phases, and the documents count different phases — so, once,
 explicitly: **two** readers in the first pass (recorded in `FINDINGS.md` §6–7), **eight** in total
-across four passes before publication, then a **seven-lens cold-open panel** whose findings are in
-`FINDINGS.md`. Different numbers in different files were three different phases; a reader was right
+across four passes before publication, then an **eight-lens cold-open panel** summarised in
+`FINDINGS.md` (the findings themselves are in a cross-project ledger outside this repository, and
+`FINDINGS.md` says so — an earlier version of this sentence promised them here). Different numbers in different files were three different phases; a reader was right
 to stop at that, in an artifact whose subject is misleading counts. They found defects in **this document** of exactly the kinds the
 theorems name — a check that compared a file with itself, a "20% bias" that was the constant
 $\sqrt{2/\pi}$, a witness offered to a theorem whose hypothesis it did not satisfy. Every one is
@@ -74,7 +87,7 @@ If you want the short version of why to trust anything here: **the failures are 
 their causes, in the author's own words.**
 
 <!--CHECK:theorems=26--> <!--CHECK:statements=68--> <!--CHECK:proofs=33-->
-<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=328-->
+<!--CHECK:lean_theorems=7--> <!--CHECK:evidence_files=329-->
 
 The quantities most prone to drift are re-derived by `check.py`, which fails if one has moved. That
 is not every number in these files, and an earlier version of this sentence claimed it was: nine
@@ -114,6 +127,7 @@ name was:
 | `LIMITS.md` | what this does not establish, in my voice. **Read it before the argument, not after.** |
 | `FINDINGS.md` | what running this artifact found wrong with it, before anything was packaged. |
 | `MANIFEST.json` | provenance: source commits, what was excluded and why, every modification made. |
+| **`PRIOR_ART.md`** | **what these theorems already were.** A prior-art lens scored the set 12/100 and was right: four are verbatim restatements of published results, and until that file existed this artifact cited no one. Read it before deciding how much of this is new. |
 
 ## What the handle actually checks
 

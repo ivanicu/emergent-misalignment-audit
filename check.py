@@ -7,7 +7,10 @@ It does not restate what the documents claim. It recomputes each claim from the 
 and asserts the result, so a failure here is a defect in the artifact rather than a warning about
 the environment. Everything it needs is in this directory.
 
-WHY EVERY NUMBER IN THE PROSE IS ASSERTED HERE. Documentation rots within a day of being written.
+WHY THE NUMBERS MOST PRONE TO DRIFT ARE ASSERTED HERE. (An earlier version of this line read
+"WHY EVERY NUMBER IN THE PROSE IS ASSERTED HERE" — a universal the README explicitly retracts:
+nine markers and three patterns against ~123 numeric literals. The correction had reached the README
+and not the file the README was describing.) Documentation rots within a day of being written.
 The README of the project this artifact was extracted from stated five quantities and four of them
 were wrong — falsify 21/21 when it was 23/23, 85 cells when there were 86, 15.6 MB of evidence when
 the directory held 51 MB. Nothing was lying; the numbers were true when typed and nobody re-derived
@@ -284,9 +287,34 @@ check("no builder WROTE its reference (mtime unchanged)",
       all((HERE / f).stat().st_mtime_ns == before_stat[f] for f in refs), True)
 check("no builder changed its reference's bytes",
       all(hashlib.sha256((HERE / f).read_bytes()).hexdigest() == before_hash[f] for f in refs), True)
-check("every builder wrote .LOCAL instead", all(v[2] for v in local_hashes.values()), True)
-check("every builder is byte-reproducible across two runs",
-      all(v[0] == v[1] and v[0] != "" for v in local_hashes.values()), True)
+# A READ-ONLY TREE IS A FACT ABOUT THE CHECKOUT, NOT ABOUT THE BUILD. These two gates need to WRITE
+# `<stem>.LOCAL.ipynb` to have anything to compare, so on a read-only tree the builders cannot run
+# and both printed `False (expected True)` — exit 1, the code this artifact reserves for a real
+# failure, with no errno, no path, and no mention of permissions. An ops lens hit it and named the
+# ordinary situations that produce it: a mounted container layer, an `/opt` install, a CI artifact
+# restore, a `git archive` extract. Nothing had failed.
+#
+# The machinery to say so already existed and this case simply was not wired into it. That is the
+# same shape as the defect two sections up — a dependency problem rendering as a defect in the work
+# — so it gets the same answer: name the condition, report UNVERIFIED, and do not spend the reader's
+# afternoon. Writability is TESTED rather than inferred from the failure, because inferring it from
+# "the file is missing" would re-excuse a genuinely broken builder.
+_probe = HERE / ".write-probe"
+try:
+    _probe.write_text("x")
+    _probe.unlink()
+    _writable = True
+except OSError:
+    _writable = False
+
+if not _writable:
+    UNVERIFIED.append("build invariants (tree is not writable) — 2 check(s) not run")
+    SUPPRESSED.append(2)
+    print(f"  ????  {'every builder wrote .LOCAL instead':<58} UNVERIFIED — read-only tree")
+else:
+    check("every builder wrote .LOCAL instead", all(v[2] for v in local_hashes.values()), True)
+    check("every builder is byte-reproducible across two runs",
+          all(v[0] == v[1] and v[0] != "" for v in local_hashes.values()), True)
 
 
 # ══ 3b · THE NOTEBOOKS ACTUALLY RUN INSIDE THIS ARTIFACT ═════════════════════════════════
@@ -318,8 +346,19 @@ check("no stored output is an error traceback", stored_tb, predicate=lambda d: s
 
 # The stored outputs can be stale, so re-execute into .LOCAL and compare. This is the expensive
 # gate; it is also the only one that would have caught the packaging defect above.
-if SKIP_SLOW:
-    UNVERIFIED.append("live notebook execution (CHECK_SKIP_SLOW=1)")
+# ONE NON-WRITABLE TREE, FIVE FAILING GATES, NOT ONE OF THEM A DEFECT. Fixing the two build
+# invariants left three more of the identical shape: this section re-executes the notebooks into
+# `.LOCAL` files, and `falsify.py` writes while planting — so a read-only checkout produced
+# `-1 (expected 0)`, `no .LOCAL produced`, and `22/23`, all reported as failures of the work. The
+# first repair addressed the two gates the lens happened to name; the CLASS is "gates that must
+# write", and it is enumerated here rather than patched one report at a time.
+if not _writable:
+    UNVERIFIED.append("live notebook execution (tree is not writable) — 3 check(s) not run")
+    SUPPRESSED.append(3)
+    print(f"  ????  {'every cell runs against the staged evidence':<58} UNVERIFIED — read-only tree")
+    fo = None
+elif SKIP_SLOW:
+    UNVERIFIED.append("live notebook execution (CHECK_SKIP_SLOW=1) — 3 check(s) not run"); SUPPRESSED.append(3)
     print(f"  ????  {'every cell runs against the staged evidence':<58} SKIPPED (CHECK_SKIP_SLOW=1)")
     fo = None
 else:
@@ -346,7 +385,7 @@ if fo and not dep2:
 if fo is None:
     pass
 elif dep2 and raised is None and dependency_claim(
-        "every cell runs against the staged evidence", dep2.group(1)):
+        "every cell runs against the staged evidence", dep2.group(1), suppresses=3):
     pass
 elif dep2 and raised is None:
     # The message named a module that imports fine, so this is not an environment problem. It was
@@ -476,10 +515,10 @@ section("3c · the Lean claim, at its real strength")
 import shutil, tempfile
 LEAN = None if SKIP_SLOW else shutil.which("lean")
 if SKIP_SLOW:
-    UNVERIFIED.append("Lean theorems (CHECK_SKIP_SLOW=1)")
+    UNVERIFIED.append("Lean theorems (CHECK_SKIP_SLOW=1) — 25 check(s) not run"); SUPPRESSED.append(25)
     print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} SKIPPED (CHECK_SKIP_SLOW=1)")
 elif not LEAN:
-    UNVERIFIED.append("Lean theorems (no `lean` on PATH)"); SUPPRESSED.append(5)
+    UNVERIFIED.append("Lean theorems (no `lean` on PATH) — 25 check(s) not run"); SUPPRESSED.append(25)
     print(f"  ????  {'Lean compiles, axiom-free, obligation holds':<58} UNVERIFIED — no lean binary")
 else:
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lean-check-"))
@@ -640,7 +679,14 @@ section("4 · the checks are falsifiable")
 # stock python the reader used to see `falsify.py ran  False (expected True)` and exit 1, with the
 # actual cause (ModuleNotFoundError) captured into a variable and never printed. That is this
 # document's own T21: a predicate that discards the field its output would have explained.
-fal = subprocess.run([sys.executable, "falsify.py"], cwd=HERE, capture_output=True, text=True, timeout=300)
+if not _writable:
+    # falsify.py plants violations on disk; it cannot run at all on a read-only tree, and the
+    # 22/23 it reports there is a fact about the mount, not about the suite.
+    class _NR:
+        stdout = ""; stderr = ""; returncode = 0
+    fal = _NR()
+else:
+    fal = subprocess.run([sys.executable, "falsify.py"], cwd=HERE, capture_output=True, text=True, timeout=300)
 m = re.search(r"(\d+)/(\d+) assertions fired", fal.stdout)
 # A DEPENDENCY THAT BREAKS IS NOT A DEPENDENCY THAT DISAPPEARS. Matching only
 # ModuleNotFoundError means numpy 3.0 removing an attribute raises AttributeError, the regex
@@ -665,7 +711,11 @@ dep = re.search(r"ModuleNotFoundError: No module named '(\w+)'", fal.stderr)
 #
 # So only a genuinely absent module excuses this gate, and `dependency_claim` verifies the absence
 # rather than believing the message.
-if m is None and dep and dependency_claim("assertions fire on planted false input", dep.group(1)):
+if not _writable:
+    UNVERIFIED.append("falsifiability of the science suite (tree is not writable) — 1 check(s) not run")
+    SUPPRESSED.append(1)
+    print(f"  ????  {'assertions fire on planted false input':<58} UNVERIFIED — read-only tree")
+elif m is None and dep and dependency_claim("assertions fire on planted false input", dep.group(1)):
     pass
 elif m is None and dep:
     pass          # dependency_claim already recorded the FAILURE — the module imports fine
@@ -1100,8 +1150,20 @@ if not SKIP_SLOW and not UNVERIFIED and _total != EXPECTED_TOTAL:
     print("        number of gates this artifact has.")
     sys.exit(1)
 if SKIP_SLOW or UNVERIFIED:
-    print(f"  ({N} of the {EXPECTED_TOTAL} declared gates ran here; "
-          f"{len(UNVERIFIED)} could not, so the total is not asserted on this machine)")
+    # THE ARITHMETIC MUST CLOSE, OR THE LINE IS WORSE THAN SILENCE. This printed
+    # "78 of the 83 declared gates ran here; 3 could not" — and 78+3 is 81, so an operator was
+    # invited to reconcile a two-check hole that does not exist. The 3 counted UNVERIFIED GATES
+    # while the 78 counted CHECKS, two different units in one sentence, which is this artifact's
+    # own T13 committed by its summary line.
+    #
+    # The per-gate suppression counts are now MEASURED, not declared: Lean's section is 25 checks
+    # (83 with lean on PATH, 58 without), live notebook execution is 3, the falsify and tokenizer
+    # tiers are 1 each. I had written 5 for Lean by eye. Where the counts are right this line
+    # closes exactly; where it does not close it now SAYS so rather than printing a hole.
+    _acct = N + sum(SUPPRESSED)
+    _fit = "" if _acct == EXPECTED_TOTAL else f"  ⚠ {_acct} != {EXPECTED_TOTAL} declared — accounting is incomplete"
+    print(f"  ({N} ran + {sum(SUPPRESSED)} suppressed = {_acct} of {EXPECTED_TOTAL} declared;"
+          f" {len(UNVERIFIED)} gate(s) could not run here){_fit}")
 print(f"all {N} checks passed — every number above was recomputed, none was quoted")
 if UNVERIFIED:
     # EXIT 2, NOT 0. This printed "UNVERIFIED is not a pass" and then exited 0 anyway, so any CI

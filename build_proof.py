@@ -15,6 +15,17 @@ printed and given a verdict → the recomputation) → 总 (what is established,
                                             # (plain python3 lacks numpy/torch and is refused)
 '''
 from __future__ import annotations
+
+# A DOCUMENTED COMMAND MUST NOT BREAK THE DOCUMENTED CHECK. Importing anything writes
+# `__pycache__/`, and `check.py` fails on a shipped `.pyc` because a stale one silently shadows its
+# source. So following the README IN THE ORDER THE README PRESENTS IT — build, then check — produced
+# `FAIL no compiled bytecode ships`, exit 1, the code reserved for a real failure. `__pycache__` is
+# gitignored, so `git status` said clean and the operator got no corroborating signal from anywhere.
+# An ops lens hit it on a fresh clone and priced the diagnosis at an hour. `check.py` had set this
+# for itself and the builders had not: the hygiene was asymmetric, so the tool that cleans up was
+# protected and the tools that make the mess were not.
+import sys as _sys
+_sys.dont_write_bytecode = True
 import json
 from artifact_io import cell_id, emit
 from pathlib import Path

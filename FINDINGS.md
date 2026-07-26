@@ -164,44 +164,61 @@ which ships stored outputs can look healthy while being unable to reproduce a si
 environment variable. Excluding it broke the notebook; shipping it runnable would have handed the
 reader a command that destroys the evidence.
 
-## The seven-lens cold-open panel
+## The cold-open panel — eight lenses, three rounds, and one that never ran
 
-The README points here for it, and until now it was not here — a pointer to content at a named
-location that did not contain it, found by the panel itself. The findings live in a cross-project
-ledger (`~/.claude/skills/attack/attack.db`, campaign `persona-audit`) because their value is
-partly that they outlive this artifact; what follows is the part that is *about* this artifact.
+The README points here for it. The findings live in a cross-project ledger
+(`~/.claude/skills/attack/attack.db`, campaign `persona-audit`) because their value is partly that
+they outlive this artifact; what follows is the part that is *about* this artifact. **Every number
+in this section was re-derived from that ledger at the commit containing this sentence.**
 
-Seven lenses, each given the artifact and its own brief and nothing else — no project context, no
-other lens's output. One is a **control**, pointed at something that should not score badly; if it
-had moved, the panel would have been measuring the weather rather than the work.
+Each lens got the artifact, its own brief, and nothing else — no project context, no other lens's
+output. One is a **control**, pointed at something that should not score badly; had it moved, the
+panel would have been measuring the weather.
 
-| lens | round 1 | round 2 | what it is blind to |
-|---|---|---|---|
-| `control_evidence` (control) | **100** | — | it judges only whether staged evidence supports the sentences citing it |
-| `cold_reader` | 88 | — | cannot evaluate substance; reports only where it fell off |
-| `reproducer` | 82 | — | no judgement on whether what it ran matters |
-| `statistician` | 72 | — | ignores whether the question is interesting |
-| `form_of_claim` | 58 | **71** | attacks the sentence, not the data |
-| `adversary` | **7** | **12** | not a fair assessment; its job is to make the artifact produce a wrong answer |
+| lens | r1 | r2 | r3 | what it is blind to |
+|---|---|---|---|---|
+| `control_evidence` (control) | **100** | | | judges only whether staged evidence supports the sentences citing it |
+| `cold_reader` | 88 | | | cannot evaluate substance; reports only where it fell off |
+| `reproducer` | 82 | | | no judgement on whether what it ran matters |
+| `ops` | *not run* | | **82** | judges operability only — says nothing about the science |
+| `statistician` | 72 | | | ignores whether the question is interesting |
+| `form_of_claim` | 58 | 71 | **58** | attacks the sentence, not the data |
+| `adversary` | 7 | 12 | **34** | not a fair assessment; its job is to make the artifact produce a wrong answer |
+| `prior_art` | | | **12** | says nothing about correctness — a correct result published in 1955 is still not new |
 
 **The spread is the finding, not the mean.** 93 points separated the control from the adversary in
-round 1. An artifact that reads as sound to five lenses and as broken to one is not "mixed" — it
-means the thing being measured differs by reader, and averaging would have hidden exactly that.
+round 1. An artifact that reads as sound to one lens and broken to another is not "mixed"; it means
+the thing being measured differs by reader, and an average would hide precisely that.
 
-**Totals: 71 findings, adjudicated three-valued — 46 CONFIRMED, 1 OVERTURNED, 9 UNVERIFIED** (the
-rest are strengths and open questions). UNVERIFIED here means *the check was unfit*, never *not a
-real defect*; folding the two together is how a false acquittal is manufactured, and a false
-acquittal is permanent because nobody re-examines a cleared claim.
+**Totals: 94 findings; 78 adjudicated three-valued — 60 CONFIRMED, 1 OVERTURNED, 17 UNVERIFIED —
+and 16 not yet adjudicated.** UNVERIFIED means *the check was unfit*, never *not a real defect*.
 
-**The adversary scored 7, then 12 — and that is the honest headline.** It went 8-for-9 in round 2
-against the repairs from round 1, six of those printing `all 76 checks passed`, exit 0. Its exploits
-are individually recorded in `LIMITS.md` §3 (the one I cannot repair) and in the commit log (the
-ones I could). The score rose by five points, not fifty, because closing four gates in a file that
-holds eighty is not the same as making the file sound.
+> **⚠ This section said "seven-lens panel" over a six-row table, and the reason was worse than the
+> arithmetic.** A `form_of_claim` lens counted the rows and reported the discrepancy. The cause: the
+> `ops` lens was registered in round 1 and **never dispatched** — zero runs — and I had described the
+> panel by lenses *registered* rather than lenses *returned*. The attack protocol names this as the
+> most damaging thing available to it, because a dropped reviewer makes a thin panel look full and is
+> invisible in every downstream view, including the saturation test.
+>
+> It is recorded in the ledger as a run with a NULL verdict rather than deleted, so the over-count
+> stays legible — and the lens has since been dispatched for real. It came back at **82, the highest
+> score of any lens**, and found two defects nothing else had: the documented build-then-check order
+> exits 1 on a stray `.pyc`, and a read-only tree exits 1 with no diagnostic. **A lens I forgot to run
+> found the two failures an operator would hit first.**
 
-**What this panel does NOT mean.** Two rounds of these lenses, over the attack families actually
-run, surfaced these objections. It does not mean the artifact is correct. Correct arithmetic on the
-wrong comparison is the failure no lens here catches — that is what the UNVERIFIED list and the
-admitted coverage gaps are for. **Saturation was not reached**: round 2 produced nine defect classes
-never seen in round 1, so the stopping rule (two consecutive rounds with nothing new) is unmet, and
-this section describes an audit still in progress rather than a completed one.
+**The adversary is the number to read.** 7 → 12 → 34 across three rounds. In round 2 it went
+8-for-9 against the round-1 repairs, six exploits printing `all 76 checks passed`, exit 0. In round 3,
+**three of six attacks failed structurally** — it could not find a seam in the dependency-excuse
+repair, the gate accounting, or the module-shadow pin — and the three that landed are all one shape:
+*a gate adjudicating a representation the attacker writes.*
+
+**`prior_art` scored 12, and it is the most consequential result here.** See `PRIOR_ART.md`: the
+theorem set restates published work, four items verbatim, and until that file existed this artifact
+cited no one.
+
+**What this panel does NOT mean.** Three rounds of these lenses, over the attack families actually
+run, surfaced these objections. It does not mean the artifact is correct — correct arithmetic on the
+wrong comparison is the failure no lens here catches. **Saturation was not reached.** New defect
+classes per round: **43, then 18, then 7.** Declining, but the stopping rule is two consecutive
+rounds with nothing new, and no round has yet produced zero. Five attack families are logged as
+applicable-and-never-run, and `PRIOR_ART.md` exists because one of them finally was.
