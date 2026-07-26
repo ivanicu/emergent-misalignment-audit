@@ -16,6 +16,12 @@ science, and a stale sentence fails the build.
 """
 from __future__ import annotations
 
+# THIS RUN MUST NOT CREATE THE THING IT FORBIDS. check.py imports artifact_io and closure, which
+# writes __pycache__ — and the bytecode gate below then fires on files the check itself just made.
+# A gate that manufactures its own violation is as useless as one that cannot fire.
+import sys as _sys
+_sys.dont_write_bytecode = True
+
 import hashlib
 import json
 import pathlib
@@ -24,6 +30,7 @@ import subprocess
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
+MARKER = r"<!--CHECK:([a-z0-9_]+)=([^>]+)-->"   # ONE definition: parser and counter share it
 
 # A FULL RUN EXECUTES BOTH NOTEBOOKS AND THE LEAN, WHICH TAKES MINUTES. `falsify_check.py` runs this
 # file once per planted violation, so a full run each time turns a falsification pass into an hour.
@@ -67,6 +74,43 @@ for rel, rec in MAN["evidence"].items():
 check("every manifest file present and unmodified", f"{len(MAN['evidence'])} files", predicate=lambda _: not bad)
 for b in bad[:5]:
     print(f"        {b}")
+
+# THE MANIFEST CANNOT AUTHENTICATE THE TREE THAT REGENERATES IT. An adversary doubled every answer
+# in a staged rollout file so the headline collapse ran BACKWARDS, ran `seal.py`, and passed §1 —
+# because §1 hashes whatever seal.py last saw. A hash chain rooted inside the thing it authenticates
+# is a loop. The only anchor outside it is version control, so the tree is now checked against git,
+# which an attacker editing the working copy does not control.
+import subprocess as _sp
+_git = _sp.run(["git", "-C", str(HERE), "status", "--porcelain", "--", "."],
+               capture_output=True, text=True)
+if _git.returncode != 0:
+    UNVERIFIED.append("tree-vs-git (not a git work tree)")
+    print(f"  ????  {'evidence matches version control':<58} UNVERIFIED — not under git")
+else:
+    dirty = [l for l in _git.stdout.splitlines() if l.strip()]
+    check("evidence matches version control (not just the manifest)", dirty,
+          predicate=lambda d: d == [])
+    for d in dirty[:6]:
+        print(f"        {d}")
+
+# A .pyc SHADOWS ITS SOURCE AND IS GITIGNORED, SO THE GIT ANCHOR CANNOT SEE IT. An adversary
+# compiled a modified artifact_io.py whose count_proofs returned the retracted over-count, patched
+# the .pyc header's mtime and size to match the pristine source, and shipped both — source
+# byte-identical to pristine, Python never reading it. Every gate agreed with the forged number.
+# Bytecode is not evidence and has no business in a published artifact.
+stale_pyc = sorted(str(q.relative_to(HERE)) for q in HERE.rglob("*.pyc"))
+check("no compiled bytecode ships (a .pyc silently shadows its source)", stale_pyc,
+      predicate=lambda lst: lst == [])
+
+# And any .py at the artifact root is importable ahead of site-packages, because sys.path[0] is the
+# script directory. An adversary planted `tokenizers.py` here; check.py's own `from tokenizers
+# import Tokenizer` got the shim, which handed the real class to every caller except check.py.
+_expected_py = {"artifact_io.py", "build_argument.py", "build_proof.py", "check.py", "closure.py",
+                "derive_length_census.py", "falsify.py", "falsify_check.py", "fill_outputs.py",
+                "seal.py", "stage_data.py", "verify.py"}
+_root_py = {q.name for q in HERE.glob("*.py")}
+check("no unexpected module shadows a dependency at the artifact root",
+      sorted(_root_py - _expected_py), predicate=lambda lst: lst == [])
 
 staged = sorted((HERE / "data").rglob("*"))
 check("staged evidence files", sum(1 for p in staged if p.is_file()), predicate=lambda n: n > 0)
@@ -159,7 +203,15 @@ section("3b · the notebooks execute in this tree")
 
 stored_tb = {}
 for nbname in ("PROOF.ipynb", "ARGUMENT.ipynb"):
-    nb = json.loads((HERE / nbname).read_text())
+    try:
+        nb = json.loads((HERE / nbname).read_text())
+    except json.JSONDecodeError as exc:
+        # A CORRUPTED NOTEBOOK IS A FINDING, NOT A CRASH. Appending one byte to ARGUMENT.ipynb used
+        # to surface as a raw JSONDecodeError traceback; the exit code was right and the operator
+        # got a stack trace instead of a named failure.
+        check(f"{nbname} is valid JSON", f"{type(exc).__name__}: {exc}", predicate=lambda _: False)
+        stored_tb[nbname] = -1
+        continue
     stored_tb[nbname] = sum(
         1 for c in nb["cells"] if c["cell_type"] == "code"
         and any("Traceback" in "".join(o.get("text", "")) for o in c.get("outputs", []))
@@ -376,19 +428,29 @@ else:
         src_lean = _re2.sub(r"/-.*?-/", "", _raw, flags=_re2.S)          # block comments
         src_lean = "\n".join(ln.split("--")[0] for ln in src_lean.splitlines())   # line comments
         DECL = r"(?m)^\s*(?:@\[[^\]]*\]\s*)*(?:private\s+|protected\s+|noncomputable\s+)*"
-        declared = re.findall(DECL + r"theorem\s+(\S+)", src_lean)
-        asked = re.findall(r"(?m)^\s*#print axioms\s+\S*?(\w+)\s*$", src_lean)
-        clean = set(re.findall(r"'\S*?(\w+)' does not depend on any axioms", out_f))
+        # FULL NAMES, AND BOTH QUOTE STYLES. Two composing bugs let an adversary certify a false
+        # theorem: (a) this matched "declaration uses 'sorry'" with STRAIGHT quotes while Lean 4
+        # emits BACKTICKS, and (b) every name was reduced to its last \w+ component, so a decoy
+        # `Audit.clamp_fixes_orthogonal : True := trivial` in another namespace satisfied the
+        # by-name assertion for the real `PersonaForensics.clamp_fixes_orthogonal`, whose
+        # hypothesis had been deleted and whose proof was `sorry`. All five §3c assertions passed.
+        ns = re.search(r"(?m)^namespace\s+(\S+)", src_lean)
+        prefix = (ns.group(1) + ".") if ns else ""
+        declared = {prefix + n for n in re.findall(DECL + r"theorem\s+(\S+)", src_lean)}
+        asked = set(re.findall(r"(?m)^\s*#print axioms\s+(\S+)\s*$", src_lean))
+        clean = set(re.findall(r"'(\S+)' does not depend on any axioms", out_f))
         check(f"  {lf.name} compiles", rc_f, 0)
         check(f"  {lf.name}: every declared theorem is asked about",
-              sorted(set(declared) - set(asked)), predicate=lambda miss: miss == [])
+              sorted(declared - asked), predicate=lambda miss: miss == [])
         check(f"  {lf.name}: every declared theorem reports axiom-free",
-              sorted(set(declared) - clean), predicate=lambda miss: miss == [])
+              sorted(declared - clean), predicate=lambda miss: miss == [])
         check(f"  {lf.name}: no axiom is declared in the file",
               re.findall(DECL + r"axiom\s+(\S+)", src_lean), predicate=lambda a: a == [])
+        check(f"  {lf.name}: every #print axioms names a declared theorem",
+              sorted(asked - declared), predicate=lambda extra: extra == [])
         check(f"  {lf.name}: no lemma/example smuggles a proof past the theorem scan",
               re.findall(DECL + r"(?:lemma|example)\s+(\S+)", src_lean), predicate=lambda a: a == [])
-        check(f"  {lf.name}: no sorry", "sorryAx" not in out_f and "declaration uses 'sorry'" not in out_f, True)
+        check(f"  {lf.name}: no sorry", "sorryAx" not in out_f and not re.search(r"declaration uses .sorry.", out_f), True)
         check(f"  {lf.name}: nothing unsafe/partial/implemented_by",
               re.findall(r"(?m)^\s*(?:unsafe|partial)\s|@\[implemented_by", src_lean),
               predicate=lambda a: a == [])
@@ -644,7 +706,7 @@ for doc, name in ((readme, "README.md"), (limits, "LIMITS.md")):
     # green, while a separate regex counted 4 markers present, so "4 present" and "3 handled" could
     # not visibly disagree. The number it guards, s19_at_cap = 2, is the one that killed v1 of the
     # censoring claim.
-    for claimed in re.findall(r"<!--CHECK:([a-z0-9_]+)=([^>]+)-->", doc):
+    for claimed in re.findall(MARKER, doc):
         key, val = claimed
         if key == "theorems":
             check(f"{name} states {key}", kinds["T"], int(val))
@@ -681,12 +743,29 @@ EVIDENCE_DIR = HERE / "data" / "scripts"   # the audited source: verbatim, paths
 # reader planted the author path into README.md, a markdown cell of PROOF.ipynb and Clamp.lean and
 # the gate stayed green. Worse, the pristine artifact ALREADY shipped it — twice in PROOF.ipynb's
 # notebook metadata and three times in MANIFEST.json — so the gate was green over a live leak.
-AUTHORED_SUFFIX = (".py", ".md", ".ipynb", ".lean", ".json", ".txt")
+BINARY_SUFFIX = (".pt", ".png", ".jpg", ".gz", ".zip", ".pyc", ".so", ".bin")
 leaks = []
 for p in sorted(HERE.rglob("*")):
-    if not p.is_file() or p.suffix not in AUTHORED_SUFFIX:
+    # DENYLIST, NOT ALLOWLIST. This skipped anything whose suffix was not in a fixed tuple, so an
+    # adversary shipped PROVENANCE.yaml, setup.cfg and a file called NOTES with no suffix at all —
+    # each carrying the author path, none scanned, none hashed. The comment above it read "EVERY
+    # TEXT FILE THIS ARTIFACT AUTHORS". Now every file is scanned unless it is demonstrably binary.
+    if not p.is_file():
         continue
-    if EVIDENCE_DIR in p.parents:            # the audited source keeps its paths, by design
+    if p.suffix in BINARY_SUFFIX:
+        continue
+    try:
+        _probe = p.read_bytes()[:2048]
+        if b"\x00" in _probe:
+            continue                      # binary by content, not by name
+    except OSError:
+        continue
+    if EVIDENCE_DIR in p.parents:            # the audited scripts keep their paths, by design
+        continue
+    if (HERE / "data") in p.parents:
+        # ALL staged evidence is verbatim, not just data/scripts. Model-generated rollouts quote the
+        # author's path because the model was shown it; sanitising evidence to satisfy a leak gate
+        # would fabricate provenance, which is the one thing this artifact must not do.
         continue
     if p.name == "MANIFEST.json":            # provenance: it RECORDS the source paths on purpose
         continue
@@ -754,7 +833,15 @@ check("no authored file leaks an absolute author path", leaks, predicate=lambda 
 # README says "every number in this file and in LIMITS.md is re-derived". That sentence was false
 # for LIMITS.md, which had zero markers — a promise checked by a loop with nothing to iterate over.
 for doc in ("README.md", "LIMITS.md"):
-    n_markers = len(re.findall(r"<!--CHECK:", (HERE / doc).read_text()))
+    # THE COUNT MUST USE THE PARSER'S REGEX. This counted the bare literal `<!--CHECK:` while the
+    # handler parsed `[a-z0-9_]+`, so a marker the handler CANNOT read — an uppercase key, a leading
+    # space — was counted as coverage and never handled, and the "unknown marker must fail" branch
+    # was unreachable for it. An adversary shipped two fabricated numbers wearing verification tags
+    # and the artifact reported MORE coverage because of them.
+    raw_tags = len(re.findall(r"<!--CHECK:", (HERE / doc).read_text()))
+    n_markers = len(re.findall(MARKER, (HERE / doc).read_text()))
+    check(f"{doc}: every CHECK tag is parseable by the handler", raw_tags - n_markers,
+          predicate=lambda d: d == 0)
     check(f"{doc} carries re-derived numbers", n_markers, predicate=lambda n: n >= 4)
 
 # The evidence directory is expected to contain them, and that expectation is asserted rather than
@@ -771,6 +858,9 @@ check("audited source kept verbatim (paths intact = not sanitised)", len(kept),
 # residue of having been checked.
 for _scratch in HERE.glob("*.LOCAL.ipynb"):
     _scratch.unlink(missing_ok=True)
+import shutil as _sh
+for _pyc in HERE.rglob("__pycache__"):
+    _sh.rmtree(_pyc, ignore_errors=True)
 
 print(f"\n{'=' * 78}")
 if UNVERIFIED:
@@ -784,6 +874,17 @@ if FAIL:
         print(f"   · {f}")
     sys.exit(1)
 print(f"all {N} checks passed — every number above was recomputed, none was quoted")
+if UNVERIFIED:
+    # EXIT 2, NOT 0. This printed "UNVERIFIED is not a pass" and then exited 0 anyway, so any CI
+    # reading the exit code saw green on a run that skipped a quarter of the gates. The prose was
+    # honest and the machine-readable signal was not — which is this artifact's own thesis,
+    # committed by its own handle. A reproducer lens found it.
+    #   0 = every gate ran and passed
+    #   2 = everything that could run passed, but some gates could not run here
+    #   1 = something failed
+    print(f"\nEXIT 2 — {len(UNVERIFIED)} gate(s) could not run in this environment. Not a failure,")
+    print("and not a clean pass either. Install the packages named above for exit 0.")
+    sys.exit(2)
 print("\nWhat this does NOT establish: that the arguments are correct. It establishes that the")
 print("evidence is intact, the counts are real, the build is reproducible, the assertions can")
 print("fail, and the prose matches the object. Correctness is what ARGUMENT.ipynb is for, and it")

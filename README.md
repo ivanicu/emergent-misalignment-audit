@@ -5,8 +5,15 @@ This is the audit that says which of those claims survive, which do not, and —
 you can check it yourself in under a minute, on a laptop, without a GPU, a model, or the network.**
 
 ```bash
-python3 check.py        # 69 assertions · CPU only · no network · no weights · no credentials
+python3 check.py        # CPU only · no network · no model weights · no credentials
 ```
+
+**What you get depends on what you have, and the exit code says which.** On a bare standard-library
+Python: **64 checks pass, 3 report UNVERIFIED, exit 2** — three gates need `numpy`, `torch` or
+`tokenizers` (see `requirements.txt`) and the run refuses to call that a clean pass. With those
+installed: **69 pass, exit 0**. Exit 1 means something actually failed. An earlier version of this
+line advertised "69 assertions" next to the bare command and exited 0 on a degraded run; a
+reproducer lens caught both.
 
 ## What the two projects claimed, and what survived
 
@@ -115,7 +122,7 @@ name was:
    against `step0375` the ratio is identically 1 and the claim is vacuous. An earlier version of
    this line said *"more than any cell it is compared to, so every reported collapse is a lower
    bound"* — withdrawn; see `LIMITS.md`.
-6. **Some of the prose** — nine `<!--CHECK:-->` markers plus three quantity patterns matched
+6. **Some of the prose** — nine machine-checked markers plus three quantity patterns matched
    wherever they appear. This file carries ~25 numeric literals and `LIMITS.md` ~98, so most are
    **not** re-derived. An earlier version of this README claimed all of them were.
 

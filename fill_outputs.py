@@ -148,7 +148,16 @@ def run_notebook(path: pathlib.Path) -> tuple[int, int, int]:
 
 def main() -> int:
     preflight()
-    dirs = sys.argv[1:] or ["audit"]
+    # DEFAULTING TO A DIRECTORY THAT DOES NOT EXIST IS A SILENT NO-OP. `audit/` was excluded from
+    # this artifact, so running this bare printed "0 cells now carry their real output" and exited
+    # 0 — success-shaped output for work never done. Default to the tree it lives in, and refuse
+    # a target that holds no notebooks rather than reporting zero.
+    dirs = sys.argv[1:] or ["."]
+    missing = [d for d in dirs if not list((HERE / d).glob("*.ipynb"))]
+    if missing:
+        print(f"REFUSING: no .ipynb found in {missing}. Nothing to fill; this would exit 0 having "
+              f"done nothing, which is indistinguishable from success.", file=sys.stderr)
+        return 2
     total_ran = total_failed = 0
     for d in dirs:
         for nb in sorted((HERE / d).glob("*.ipynb")):
