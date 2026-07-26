@@ -12,6 +12,18 @@ DECORATION and this script exits non-zero.
 `falsify.py` does this for the scientific assertions. This does it for the packaging gates — the
 integrity, build, provenance and documentation checks — which are the ones most likely to be
 written once and never exercised.
+
+WHAT THIS HARNESS DOES **NOT** COVER, stated here rather than left to be inferred from its absence.
+One round-6 exploit is verified only by hand: the anchor-padding attack, which adds `data/` to
+`.gitignore`, drops 219 staged files from the index, and creates 240 empty files elsewhere to buy
+the tracked-file count back. It is not a case below because landing it requires mutating THIS
+repository's git index, and a plant that has to be undone with `git update-index` is a plant that
+can leave the real artifact broken in a way `Planted` cannot restore. The repair (comparing the
+SETS rather than the counts) was verified by reproducing the attack in a throwaway clone with its
+own git repo, and the output is in the commit that made it.
+
+So: 39 gates are re-proved on every run of this file, and one is proved by a procedure a reader has
+to take on trust from a commit message. That is a weaker guarantee and it is the only one here.
 """
 from __future__ import annotations
 
@@ -599,6 +611,63 @@ def _(tmp):
         subprocess.run([PY, "build_proof.py"], cwd=HERE, capture_output=True,
                        env={**__import__("os").environ, "ARTIFACT_WRITE_REFERENCE": "1"})
         subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
+@case("truncate the Lean audit with #exit", "AXIOMAUDIT-RAN sentinel")
+def _(tmp):
+    # ROUND-6 ATTACK A1, and the most instructive failure in the artifact. The environment
+    # enumeration was sound; `#exit` stops Lean elaborating before it, so the metaprogram never
+    # runs, the compiler exits 0, and stdout carries no AXIOMDEP line. "No output" and "no axioms"
+    # were the same bytes. Without the sentinel this plant passes every Lean gate.
+    target = HERE / "lean/Clamp.lean"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(must_replace(target.read_text(), "end PersonaForensics",
+            'def commentOpen : String := "/-"\n'
+            'axiom reviewer_agreement : (16:Nat) = 15\n'
+            'theorem clamp_proves_sixteen_x : (16:Nat) = 15 := reviewer_agreement\n'
+            '#exit\n'
+            'def commentClose : String := "-/"\n\n'
+            'end PersonaForensics', 1))
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check(slow=True)
+
+
+@case("hide a false count behind markdown emphasis", "DERIVED patterns tolerate markup")
+def _(tmp):
+    # ROUND-6 ATTACK A2. `(\d+)\s+proofs` never sees `**99** proofs`, because `*` is not `\s`.
+    # The plant produced no output line at all — not flagged, not exempted, not printed.
+    target = HERE / "README.md"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(target.read_text().rstrip("\n") +
+                          "\n\nThe argument as shipped closes **99** proofs.\n")
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
+@case("move a registered number to another document", "registry is scoped per file")
+def _(tmp):
+    # ROUND-6 ATTACK A3. `999 labelled statements` is registered because LIMITS.md records a planted
+    # self-attack. Keyed on the NUMBER alone, the same digits in FINDINGS.md inherited the exemption
+    # and the run PRINTED the fabrication as a registered retraction.
+    target = HERE / "FINDINGS.md"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(target.read_text().rstrip("\n") +
+                          '\n\nIndependent replication confirms "999 labelled statements".\n')
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
+@case("empty the manifest hash loop, keep its printed count", "the payload must come from the loop")
+def _(tmp):
+    # ROUND-6 ATTACK A5. Slicing the iterable to [:0] left the label and the literal "333 files"
+    # intact, so §1 printed `ok ... 333 files` while hashing nothing — and the gate-accounting guard
+    # could not see it, because that guard asks HOW MANY gates ran and never WHICH.
+    target = HERE / "check.py"
+    with Planted(target):
+        target.write_text(must_replace(target.read_text(),
+            'for rel, rec in MAN["evidence"].items():',
+            'for rel, rec in list(MAN["evidence"].items())[:0]:', 1))
         return run_check()
 
 
