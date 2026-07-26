@@ -108,7 +108,14 @@ reading output I had generated and ignored.
 > The verdict is now **attributed**: a case counts as FIRED only if a FAIL line other than the
 > anchor appears, and anchor-only runs print `UNATTRIB`. That is still a proxy — it cannot tell
 > *which* non-anchor gate failed — and the proxy ledger for it is in `_matches_gate`'s docstring.
-> **The number to trust is the non-git one.** No
+>
+> **The case is now repaired and the number re-measured, in that order.** The plant writes the
+> registry's three-field form, so it survives the loader and reaches the gate; re-run in a fresh
+> non-git copy, **48/48 FIRED, no LAUNDERED, no DECORATION, no UNATTRIB.** So the sequence is: 48/48
+> in a git tree (meaningless — the anchor fired for every case), 47/48 in a non-git tree (honest, and
+> one case was never testing anything), 48/48 in a non-git tree after the plant was fixed (honest,
+> and now it is). **Only the third number is evidence, and the first two are here because the
+> difference between them is the finding.** No
 > LAUNDERED. What remains true, and is the part that matters, is that **no document and no gate
 > invokes it**: a reader who runs the documented command never exercises it, so its result reaches
 > them only through a commit message. That is a weaker guarantee than a gate and it is why the
