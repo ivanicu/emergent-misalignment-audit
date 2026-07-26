@@ -1,4 +1,15 @@
-# An independent audit of two emergent-misalignment research lines
+# An audit of two emergent-misalignment research lines
+
+> **What "independent" does and does not mean here — stated first, because the H1 used to assert it
+> and nothing in this repository defined it.** `MANIFEST.json` records `built_from` and both
+> `evidence_sources` as three directories in one private home tree, and this artifact ships the
+> audited project's own frozen pre-registration. **Auditor and audited are the same author.** The
+> independence that exists is procedural, not institutional: every reviewer quoted here ran with no
+> context, no access to my reasoning, and a brief written to attack rather than to confirm; several
+> of them overturned my conclusions and are quoted doing it. That is worth something, and it is not
+> what a reader hears in "an independent audit". A blind lens whose only subject was this document's
+> rhetoric found the word in line 1 and nowhere else in the file, and it was right to. The word is
+> withdrawn from the title and replaced by this paragraph.
 
 **Two research lines produced claims about emergent misalignment. This audit says what each claim is
 now worth, what it could not settle, and — first — how much of each line it actually reached.
@@ -191,6 +202,7 @@ name was:
 | `LIMITS.md` | what this does not establish, in my voice. **Read it before the argument, not after.** |
 | `FINDINGS.md` | what running this artifact found wrong with it, before anything was packaged. |
 | `MANIFEST.json` | provenance: source commits, what was excluded and why, every modification made. |
+| **`PRE_REGISTRATION.md`** | **the audited project's own design document, and it is not on this artifact's side.** It pre-registers *answer length* — the axis of the one claim that SURVIVES below — as confound **O7**, with a two-sided length-AUC of **0.93** and a covariate-adjusted mixed-effects re-analysis marked MANDATORY, which `nb/cells/441_length.py` records was never implemented anywhere in 225 scripts. Until a reviewer found it, this file was shipped and named on no page a reader meets. `LIMITS.md` §3c carries the full statement. |
 | **`PRIOR_ART.md`** | **what these theorems already were.** A prior-art lens scored the set 12/100 and was right: four are verbatim restatements of published results, and until that file existed this artifact cited no one. Read it before deciding how much of this is new. |
 
 ## What the handle actually checks

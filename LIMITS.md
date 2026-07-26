@@ -261,6 +261,76 @@ shorter"), with a covariate-adjusted mixed-effects analysis marked MANDATORY —
 in 225 scripts." The surviving claim promotes to a finding the variable the pre-registration named as
 the thing most likely to fake one.
 
+## 3f · The result that would have made it wrong to write this, and what happened when I looked
+
+A blind lens reading only the *rhetoric* of this artifact — not one number, by its own brief —
+returned the finding I had no answer to:
+
+> Every defect found against this artifact, including successful ones, arrives as *confirmation*
+> that its theorems name real failure modes. There is no outcome that costs the frame anything.
+
+It backed that with a search I had never run, and I re-ran it myself before accepting it:
+`grep -rniE "would have (been|meant|shown|failed)|if the (audit|artifact|claim) had"` over every
+markdown file in this artifact returned **one** hit — `FINDINGS.md:176`, *"panel would have been
+measuring the weather"* — which is about the review apparatus rather than about any claim.
+
+⚠ **That count was taken before this section existed, and writing this section changes it.** The
+sentences below are counterfactuals, so the grep now returns several, and the figure "one" is a
+statement about the artifact as it stood at the moment the lens read it — not about the file you are
+holding. A count that its own sentence invalidates is a defect class this campaign logged under
+`self-referential-count-falsified-by-its-own-sentence`; it is dated here rather than removed,
+because the point of the number is what it says about the eleven rounds that preceded it.
+
+Eleven rounds of adversarial review, three hundred pages
+of self-correction, and **the artifact had never named a result that would have made it wrong to
+have been written.** That is failure mode ⑤ — narrative immunity — and naming it in other people's
+work is half of what this artifact is for.
+
+So here is the test, stated so it could have gone the other way.
+
+**The thesis.** *Trust a number in proportion to whether a mechanism re-derives it.* Twelve numbers
+in `README.md` and `LIMITS.md` carry a `CHECK` marker — an HTML comment of the form `CHECK:key=value`,
+written here without its comment delimiters **because writing the delimiters creates a real marker**:
+the first version of this paragraph did exactly that, `check.py` parsed the word `key` as a quantity,
+and the run failed with `marker 'key' has a handler → False`. A document describing a mechanism from
+inside that mechanism's own scope is a use/mention collision, and this artifact has now committed one
+in six different gates — so the mention is defused rather than the parser widened, because widening
+the parser is how the exemption chain started. The marked numbers are re-derived by the
+handle. A count over the five prose documents finds **235** further integers (excluding years) that
+are maintained by hand. If the thesis is right, defects should concentrate in the 235.
+
+**What would have killed it.** If the marker-enforced numbers had gone wrong at the same rate as the
+hand-maintained ones, the mechanism would be decoration and the artifact's organising claim would be
+false — and every recommendation in it would have to be withdrawn, because they all reduce to
+*generate, do not restate*.
+
+**What actually happened: the thesis survived in a form strictly weaker than the one I stated, and
+two of the campaign's severity-5 findings are the reason.**
+
+- **A marker binds a number to its file, not to the fact.** One finding recorded the full-environment
+  pass count as **88 in the file that calls it enforced and 83 in the sibling that states the same
+  thing.** The marker did its job perfectly and the quantity was wrong anyway, because nothing
+  obliged the sibling to carry a marker at all. *Enforcement is per-occurrence; drift is per-fact.*
+- **A marker certifies the derivation, and the derivation can be subverted.** The round-10 adversary
+  compiled a forged `artifact_io.pyc` — the module `check.py` imports to do its counting — hid it in
+  a `chmod 0111 __pycache__` that no file glob can list, and the run printed `labelled statements in
+  ARGUMENT 88`, matched it against a doctored marker, and closed with **`all 98 checks passed — every
+  number above was recomputed, none was quoted`**, exit 0, source byte-identical to git HEAD. Three
+  marker-enforced quantities were fabricated *and the markers passed*, in the mechanism's own voice.
+
+**So the honest form of the thesis is narrower than the one this artifact was built to demonstrate.**
+A re-derived number is better than a typed one **only where the derivation is itself out of the
+audited party's reach, and only for the occurrence the marker sits on.** Both qualifications were
+found by attack rather than by me, and neither is visible from a green run — which is the whole
+problem, one level up.
+
+**What I am not entitled to say.** I cannot report a *rate*. Findings are anchored to prose, and a
+matcher over their text cannot reliably separate "the proof count" from "a proof" — my first attempt
+returned 25 of 185 findings as touching a marked quantity, and reading them showed the matcher was
+over-inclusive. So this section rests on **two counterexamples I read individually**, not on a
+comparison of frequencies. The frequency comparison is the measurement that would settle the thesis
+properly, and this artifact does not contain it.
+
 ## 4 · Scope limits on the instruments
 
 **What the Lean proves, and what "zero axioms" is worth.** Both files compile under Lean 4.29.1 and
