@@ -677,6 +677,71 @@ def _(tmp):
         return run_check()
 
 
+@case("forge the audit sentinel from inside the Lean file", "per-run nonce")
+def _(tmp):
+    # ROUND-7 ATTACK A1. The previous sentinel was a fixed string, so the audited file could print
+    # it: `#eval IO.println "AXIOMAUDIT-RAN 6"` followed by `#exit` gave `walked 6 constants` and a
+    # fully green run over a theorem proving 16 = 15. This plant is that exploit verbatim. It can
+    # only be caught by requiring a token the file could not have known when it was written.
+    target = HERE / "lean/Clamp.lean"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(must_replace(target.read_text(), "end PersonaForensics",
+            'def commentOpen : String := "/-"\n'
+            'axiom reviewer_agreement : (16:Nat) = 15\n'
+            'theorem clamp_proves_sixteen_x : (16:Nat) = 15 := reviewer_agreement\n'
+            '#eval IO.println "AXIOMAUDIT-RAN 6"\n'
+            '#exit\n'
+            'def commentClose : String := "-/"\n\n'
+            'end PersonaForensics', 1))
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check(slow=True)
+
+
+@case("delete evidence rows from the manifest itself", "manifest set-equality")
+def _(tmp):
+    # ROUND-7 ATTACK A3, and the one that showed the index was the one tracked file nothing indexed.
+    # Every integrity gate asserted containment in the direction where LOSING evidence helps, so
+    # deleting 219 rows produced `114 of 114 files hashed` and a clean anchor over a tampered tree.
+    target = HERE / "MANIFEST.json"
+    with Planted(target):
+        man = json.loads(target.read_text())
+        man["evidence"] = {k: v for k, v in man["evidence"].items() if not k.startswith("data/")}
+        target.write_text(json.dumps(man, indent=2))
+        return run_check()
+
+
+@case("register a number that is not quoted in its file", "registry liveness guard")
+def _(tmp):
+    # ROUND-7 ATTACK A2. The registry had neither of the guards its sibling `retractions.txt` has,
+    # so appending a row granted the exemption. This plant adds a row for a number that appears
+    # nowhere in the named file — the cheapest possible form of a self-service registry.
+    target = HERE / "retracted_numbers.txt"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_text(target.read_text().rstrip("\n") +
+                          "\nLIMITS.md   | 4242 proofs            # planted, quoted nowhere\n")
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
+@case("put a control character in the machinery", "C0 gate covers authored .py")
+def _(tmp):
+    # NOT AN ADVERSARY FINDING — MINE. Writing `\b` through a non-raw string put U+0008 inside the
+    # registry regex, so `["\u201c]\s*41\x08` could never match and the guard reported three genuine
+    # entries as unquoted. Same class as the `\frac` -> U+000C defect in a display equation earlier
+    # the same day; the gate written for THAT one read only the notebooks, so the machinery was
+    # uncovered. This case pins the wider scope.
+    #
+    # RE-SEALED AFTER PLANTING, ON PURPOSE. closure.py is in the manifest, so without this the
+    # hash gate fires and the case would report FIRED for a reason that has nothing to do with the
+    # C0 check — a case passing for the wrong reason is exactly the DECORATION this harness exists
+    # to detect, one level up.
+    target = HERE / "closure.py"
+    with Planted(target), Planted(HERE / "MANIFEST.json"):
+        target.write_bytes(target.read_bytes() + b"\n# planted control char: \x08\n")
+        subprocess.run([PY, "seal.py"], cwd=HERE, capture_output=True)
+        return run_check()
+
+
 def _snapshot() -> dict:
     """Copy every manifest-listed file plus the authored scripts to a temp dir.
 
