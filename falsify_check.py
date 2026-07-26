@@ -16,7 +16,13 @@ written once and never exercised.
 WHAT THIS HARNESS DOES **NOT** COVER, stated here rather than left to be inferred from its absence.
 One round-6 exploit is verified only by hand: the anchor-padding attack, which adds `data/` to
 `.gitignore`, drops 219 staged files from the index, and creates 240 empty files elsewhere to buy
-the tracked-file count back. It is not a case below because landing it requires mutating THIS
+the tracked-file count back. ⚠ AND THAT SENTENCE WAS WRONG WHEN I WROTE IT. A later adversary did the same damage with
+`MANIFEST.json` alone — no `git update-index`, no `.gitignore` edit, no padding — by deleting 219
+rows from the index nothing hashes. The gap was real and I stated its cause too narrowly, which is
+its own defect: an admitted gap for the wrong reason invites the reader to guard the wrong thing.
+The manifest direction is now checked by set equality against a walk of the tree.
+
+The git-index variant is still not a case below, because landing it requires mutating THIS
 repository's git index, and a plant that has to be undone with `git update-index` is a plant that
 can leave the real artifact broken in a way `Planted` cannot restore. The repair (comparing the
 SETS rather than the counts) was verified by reproducing the attack in a throwaway clone with its

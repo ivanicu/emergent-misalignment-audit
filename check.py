@@ -92,7 +92,7 @@ def missing(mod: str) -> bool:
 # that shrinks silently when a check is removed cannot distinguish "all of them passed" from "the
 # ones I let run passed", which is the only distinction the number is for.
 SUPPRESSED: list[int] = []
-EXPECTED_TOTAL = 90    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
+EXPECTED_TOTAL = 94    # gates in a FULL run. Asserted at the bottom; re-derived, not remembered.
 
 
 def dependency_claim(gate: str, mod: str, suppresses: int = 1) -> bool:
@@ -147,6 +147,41 @@ for rel, rec in MAN["evidence"].items():
 check("every manifest file present and unmodified",
       f"{_hashed} of {len(MAN['evidence'])} files hashed",
       predicate=lambda _: not bad and _hashed == len(MAN["evidence"]) and _hashed > 0)
+
+# THE INDEX WAS THE ONE TRACKED FILE NOTHING INDEXED, and every integrity gate here asserted
+# containment in the direction where LOSING evidence helps. An adversary deleted all 219 `data/*`
+# rows from MANIFEST.json, updated one marker, and got `114 of 114 files hashed`, an empty git
+# anchor, and `all 114 hashed files are tracked` — over a tree with a tampered census still tampered
+# on disk. Nothing had to touch git at all, which also falsifies the coverage-gap note I had written
+# in falsify_check.py claiming this attack needs `git update-index`.
+#
+# `seal.py` already computes the set that SHOULD be indexed, by walking the tree. So the honest
+# check is not "is every listed file present" — it is "does the index list exactly what the walk
+# finds". That is a REGENERATION compared against a DECLARATION, which is the only shape in this
+# artifact that has never been defeated: the notebook output comparison and the fail-closed registry
+# are the other two, and they are the two that held under every attack.
+_ev_dirs = ("data/", "lean/", "nb/")
+_ev_files = ("ARGUMENT.ipynb", "PROOF.ipynb")
+_ev_root_suffix = (".md", ".py", ".txt", ".toml")
+_ev_root_exact = (".gitignore", "LICENSE")
+_self_exclude = ("MANIFEST.json",)
+_should = set()
+for _q in HERE.rglob("*"):
+    if not _q.is_file():
+        continue
+    _rel = str(_q.relative_to(HERE))
+    if _rel.endswith(".LOCAL.ipynb") or _rel in _self_exclude or "/__pycache__/" in _rel or _rel.startswith("__pycache__/"):
+        continue
+    _at_root = "/" not in _rel
+    if (_rel.startswith(_ev_dirs) or _rel in _ev_files
+            or (_at_root and (_rel.endswith(_ev_root_suffix) or _rel in _ev_root_exact))):
+        _should.add(_rel)
+_unindexed = sorted(_should - set(MAN["evidence"]))
+_phantom = sorted(set(MAN["evidence"]) - _should)
+check("the manifest indexes EXACTLY what a walk of the tree finds (deleting a row is a failure)",
+      (_unindexed[:4] + [f"+{len(_unindexed)-4} more"] if len(_unindexed) > 4 else _unindexed)
+      or (_phantom[:4] if _phantom else f"{len(_should)} files, set-equal"),
+      predicate=lambda _: _unindexed == [] and _phantom == [])
 for b in bad[:5]:
     print(f"        {b}")
 
@@ -282,6 +317,25 @@ for nbname in ("PROOF.ipynb", "ARGUMENT.ipynb"):
             _mangled.append(f"{nbname} cell {i}: {','.join(hits)}")
 check("no cell source carries a C0 control character (mis-escaped LaTeX)", _mangled,
       predicate=lambda m: m == [])
+
+# AND THE SAME GATE ON THE AUTHORED PYTHON, because the notebook version was not enough.
+# The first instance of this class was `\frac` becoming U+000C in a display equation. The gate added
+# for it read the NOTEBOOKS. Hours later a `\b` written through a non-raw string put U+0008 inside a
+# regex in THIS FILE — `["\u201c]\s*41\x08` — so the guard demanding that every registered number be
+# quoted in its own file could never match, and reported all three genuine entries as unquoted.
+# A gate that fails closed is the safe direction, but it was still a check that could not pass, in
+# the check that had just been written to stop a registry being self-service.
+#
+# The lesson is the scope, not the character: a control-character gate that reads only the OUTPUT
+# misses every one that lands in the machinery. Both are now covered.
+_src_mangled = []
+for _pyf in sorted(HERE.glob("*.py")):
+    _txt = _pyf.read_text()
+    _hits = sorted({f"U+{ord(c):04X}" for c in _txt if ord(c) < 32 and c != "\n"})
+    if _hits:
+        _src_mangled.append(f"{_pyf.name}: {','.join(_hits)}")
+check("no authored .py carries a C0 control character (mis-escaped regex or string)",
+      _src_mangled, predicate=lambda m: m == [])
 
 
 # ══ 3 · THE BUILD IS REPRODUCIBLE AND CANNOT DAMAGE THE REFERENCE ═════════════════════════
@@ -719,11 +773,25 @@ else:
         # So the metaprogram now announces itself and reports how many constants it walked; if that
         # line is missing the gate FAILS, because the only two explanations are that the audit was
         # prevented from running or that the file declares nothing at all, and neither is a pass.
+        # THE SENTINEL WAS A STRING THE AUDITED FILE COULD PRINT. Last round I required the audit
+        # metaprogram to announce itself, and an adversary supplied the announcement:
+        # `#eval IO.println "AXIOMAUDIT-RAN 6"`, then `#exit` before the real audit. The gate
+        # reported `walked 6 constants` — a number from the plant — and 90 green over a file
+        # proving `16 = 15`. I asserted the sentinel's PRESENCE and never its AUTHORSHIP, in the
+        # repair written directly beneath my own comment about checking that the instrument was
+        # authoritative and not that the question was mine to ask.
+        #
+        # A per-run nonce fixes the class, not the instance: the token is generated here, injected
+        # into the metaprogram, and required in the output. A file committed yesterday cannot print
+        # a number drawn this second. It is never written to disk and never committed — if it were,
+        # it would be exactly as forgeable as the fixed string it replaces.
+        import secrets as _secrets
+        _nonce = _secrets.token_hex(8)
         _snip = ("\n\nopen Lean Elab Command in\nrun_cmd do\n"
                  "  let env ← getEnv\n"
                  "  let names := env.constants.map₂.foldl (init := (#[] : Array Name))\n"
                  "                 (fun acc n _ => if n.isInternal then acc else acc.push n)\n"
-                 "  logInfo m!\"AXIOMAUDIT-RAN {names.size}\"\n"
+                 f"  logInfo m!\"AXIOMAUDIT-RAN {_nonce} {{names.size}}\"\n"
                  "  for n in names do\n"
                  "    let ax ← liftCoreM <| collectAxioms n\n"
                  "    if !ax.isEmpty then\n"
@@ -738,9 +806,9 @@ else:
                       if a.strip() and a.strip() not in FOUNDATIONAL]
             if _extra:
                 smuggled.append(f"{_n} -> {_extra}")
-        _ran = re.search(r"AXIOMAUDIT-RAN (\d+)", _ar.stdout)
-        check(f"  {lf.name}: the axiom audit actually RAN (positive control — `#exit` defeats it "
-              f"silently otherwise)",
+        _ran = re.search(rf"AXIOMAUDIT-RAN {_nonce} (\d+)", _ar.stdout)
+        check(f"  {lf.name}: the axiom audit actually RAN, proved by a per-run nonce the audited "
+              f"file cannot know",
               f"walked {_ran.group(1)} constants" if _ran else "NO SENTINEL — audit never executed",
               predicate=lambda s, r=_ran: bool(r) and int(r.group(1)) > 0)
         check(f"  {lf.name}: no declaration depends on a NON-foundational axiom "
@@ -1215,6 +1283,31 @@ for doc in ("README.md", "LIMITS.md", "FINDINGS.md"):
             if int(m.group(1)) != truth:
                 prose_bad.append(f"{doc}: '{m.group(0).strip()}' but derived {truth}")
 check("bare prose numbers match the derived values", prose_bad, predicate=lambda b: b == [])
+
+# THE TWO GUARDS THE SIBLING REGISTRY ALREADY HAD, and this one shipped without either.
+# `retractions.txt` is bounded (<=5) and every entry must match a live blockquote. `retracted_
+# numbers.txt` had neither, so it was SELF-SERVICE: an adversary appended two rows naming two files,
+# added one sentence to each, and put "99 proofs" and "512 labelled statements" — truth 33 and 68 —
+# into the run, PRINTED in the mechanism's own voice as "registered for this file".
+# A registry nobody bounds is a door, and a registry nobody checks against reality is a rubber stamp.
+_reg_live, _reg_dead = [], []
+for _entry in sorted(REGISTERED_NUMBERS):
+    _f, _, _n = _entry.partition("|")
+    _path = HERE / _f
+    if not _path.exists():
+        _reg_dead.append(f"{_entry} (no such file)")
+        continue
+    # the registered number must actually be QUOTED in the file it is registered for
+    _digits = _n.split()[0]
+    _body = _path.read_text()
+    if not re.search(rf'["“]\s*{re.escape(_digits)}(?![0-9])', _body):
+        _reg_dead.append(f"{_entry} (not quoted in {_f})")
+    else:
+        _reg_live.append(_entry)
+check("every registered number is actually quoted in the file it is registered for",
+      _reg_dead, predicate=lambda d: d == [])
+check("the quoted-number registry is small enough to read in one sitting",
+      f"{len(REGISTERED_NUMBERS)} entries", predicate=lambda _: len(REGISTERED_NUMBERS) <= 5)
 for q in quoted_mentions:
     print(f"        exempt: {q}")
 for b in prose_bad[:5]:

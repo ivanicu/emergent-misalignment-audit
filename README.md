@@ -12,8 +12,11 @@ to name.**
 
 **Three things this table will not let you forget.**
 
-**The line supplying 97% of the evidence supplies one verdict, and that verdict is UNVERIFIED.** The
-line supplying 3% supplies five. The artifact is largest exactly where it concludes least.
+**The line supplying 97% of the evidence appears in exactly one row of the six-row verdict table
+below, and that row is UNVERIFIED.** The line supplying 3% supplies the other five. *(Its 27-claim
+ledger is audited separately and in more depth — 15 of 21 carry a verdict — which is the row above
+and the section further down. An earlier version of this sentence said that line "supplies one
+verdict", full stop, which its own table refutes.)*
 
 **Two of those five were retracted by that line itself, in public, before this audit ran.** They are
 recorded here, not discovered here — `data/external/DS_DEAD_LIST.md`, staged from that repository at
@@ -21,8 +24,17 @@ commit `8a65f9d9`, carries both with the same diagnoses and the same figures.
 
 **The selection rule, stated because it was missing and a lens killed the page for it.** The six rows
 are the claims the *staged evidence permitted an attempt on*: five from the ladder and seed files,
-plus `EVIL`, where the attempt **failed** because the judgment files are not staged — which is why
-that row reads UNVERIFIED rather than being absent. **What was staged was decided before any
+plus `EVIL`, where the attempt **failed** — which is why that row reads UNVERIFIED rather than
+being absent.
+
+> **⚠ That sentence used to give the wrong reason, and two blind readers caught it on identical
+> bytes.** It said the attempt failed *"because the judgment files are not staged"*. **They are
+> staged** — 178 `.jsonl` files across eleven `judgments*` directories — and `MANIFEST.json` excludes
+> exactly three, none of which is where `EVIL` lives. The real reason is one line down the page and
+> in `LIMITS.md` and `PROOF.ipynb` §14: **the staged rows record neither which rubric ran nor the
+> categories the judge was shown.** A missing FIELD, not a missing FILE. The verdict was right
+> everywhere and the reason on the front page was the one reason the rest of the artifact denies —
+> which is the failure hardest for a reader to catch, because checking the verdict finds it sound. **What was staged was decided before any
 population was enumerated**, so I cannot tell you which of that line's other claims were checkable
 and which were not, and I cannot tell you how many it made. `PROOF.ipynb` §14.13 records the shape
 of the gap: **13 of the 21 dead rows are "never present in this document, including the whole
@@ -38,7 +50,7 @@ its claims; using it as a denominator would have implied a coverage of 5/21 that
 python3 check.py     # CPU only · no network · no weights · no credentials
 ```
 
-<!--CHECK:checks_full=90--> checks, exit 0, in a full environment; on a bare standard-library Python
+<!--CHECK:checks_full=94--> checks, exit 0, in a full environment; on a bare standard-library Python
 53 pass, 4 report UNVERIFIED, and it exits 2 rather than calling that a clean run. **The three
 numbers in the table above are enforced too** — <!--CHECK:ds_files=10--> and
 <!--CHECK:pf_files=209--> are re-derived from the staged tree by `check.py`, because a page whose
@@ -47,7 +59,7 @@ argument is that unenforced numbers drift should not carry unenforced numbers.
 Every correction on this page was made against my own earlier sentences — including the finding that
 this audit's own theorem set is not new (`PRIOR_ART.md`, scored 12/100 by a lens sent to score it).
 
-## The persona-forensics kit: 0 of 27 overturned — and what that does not mean
+## The persona-forensics kit: 0 of 21 code-closed claims overturned, 15 of them adjudicated
 
 `PROOF.ipynb` §12.5: *"Nine scripts read, seven line-complete: not one of the kit's 27 claims was
 overturned, five got stronger, one sub-claim was retracted."* It is the only positive result in this
