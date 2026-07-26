@@ -190,8 +190,17 @@ panel would have been measuring the weather.
 round 1. An artifact that reads as sound to one lens and broken to another is not "mixed"; it means
 the thing being measured differs by reader, and an average would hide precisely that.
 
-**Totals: 94 findings; 78 adjudicated three-valued — 60 CONFIRMED, 1 OVERTURNED, 17 UNVERIFIED —
-and 16 not yet adjudicated.** UNVERIFIED means *the check was unfit*, never *not a real defect*.
+**Totals at commit `a7c093e`: 94 findings, all adjudicated three-valued — 76 CONFIRMED, 1 OVERTURNED,
+17 UNVERIFIED.** UNVERIFIED means *the check was unfit*, never *not a real defect*.
+
+> **⚠ That sentence is a dated snapshot, and it is dated because the undated version went stale
+> twice in one session.** It first read 46 / 1 / 9, then 60 / 1 / 17, as I worked through the
+> adjudication queue — a count of a live ledger, written into a static document, wrong within the
+> hour both times, in the artifact whose subject is numbers that drift between where they are
+> computed and where they are read. The ledger is outside this repository, so `check.py` cannot
+> re-derive this one; naming the commit is the honest alternative to pretending it is current.
+> **If you want the live number, query the ledger; if you want to know what I knew when I wrote
+> this, it is the number above.**
 
 > **⚠ This section said "seven-lens panel" over a six-row table, and the reason was worse than the
 > arithmetic.** A `form_of_claim` lens counted the rows and reported the discrepancy. The cause: the
