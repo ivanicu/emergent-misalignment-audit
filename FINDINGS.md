@@ -176,7 +176,7 @@ reader a command that destroys the evidence.
 ## The cold-open panel — ten lenses, four rounds, and one I forgot to run
 
 The README points here for it. The findings live in a cross-project ledger
-(`~/.claude/skills/attack/attack.db`, campaign `persona-audit`) because their value is partly that
+(a cross-project findings database on the author's machine, campaign `persona-audit`) because their value is partly that
 they outlive this artifact; what follows is the part that is *about* this artifact. **Every number
 in this section was re-derived from that ledger at the commit containing this sentence.**
 
