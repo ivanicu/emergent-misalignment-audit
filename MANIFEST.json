@@ -108,8 +108,8 @@
       "sha256": "976eb5b7e47f08a532ac031fee3beacc2a208199b26676e10b91f5907ac59cda"
     },
     "data/MANIFEST.json": {
-      "bytes": 6774,
-      "sha256": "0d17ca114619e73f372dcca734e91e065beabfadb2e63f3b9a3a19e0c4daa7b3"
+      "bytes": 6765,
+      "sha256": "f08c5298b9901842be36b71dc5c836802540e6c290cfceeef888c4cef8c010d7"
     },
     "data/activations/Z_evil_hooksite.pt": {
       "bytes": 177231,
